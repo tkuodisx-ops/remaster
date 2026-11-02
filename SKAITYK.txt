@@ -1,0 +1,29 @@
+REMASTER.LT SVETAINE - KAIP NAUDOTIS
+====================================
+
+1) NAUJAS STRAIPSNIS
+   - Dukart spustelekite "naujas-straipsnis.bat", ivekite pavadinima.
+   - Sukuriamas failas aplanke "straipsniai". Atidarykite Notepad ir parasykite teksta.
+   - Virsuje (tarp ---) yra: pavadinimas, data, aprasymas, nuotrauka (virselio failo vardas).
+
+2) NUOTRAUKOS
+   - Dekite i aplanka "nuotraukos" (patartina JPG/WEBP, iki ~300 KB).
+   - Straipsnyje: ![aprasymas](failas.jpg)
+   - Virselio nuotrauka: virsuje "nuotrauka: failas.jpg"
+
+3) SUGENERUOTI SVETAINE
+   - Dukart spustelekite "build.bat". Atsiranda aplankas "svetaine".
+   - Atidarykite svetaine\index.html naršyklėje, kad perziuretumete.
+
+4) PASKELBTI INTERNETE
+   - Aplanka "svetaine" ikelkite i nemokama talpykla, pvz. Cloudflare Pages
+     (Direct Upload - tiesiog ikeliamas aplankas), Netlify Drop arba GitHub Pages.
+   - Po kiekvieno naujo straipsnio: build.bat ir is naujo ikelti aplanka "svetaine".
+
+5) NUSTATYMAI (telefonas, adresas)
+   - Atidarykite build.py ir virsuje keiskite SITE: phone, email, url.
+   - Kai ivesite phone - telefonas atsiras kontaktuose su paspaudziama nuoroda.
+
+Markdown santrauka:
+   ## Antraste        **paryskinta**        [nuoroda](https://...)
+   - sarasas          1. numeruotas         > citata
