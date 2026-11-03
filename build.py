@@ -16,9 +16,11 @@ Nereikia jokių papildomų bibliotekų.
 import datetime
 import html
 import json
+import os
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -409,6 +411,23 @@ def static_page(pg):
 
 
 # ---------------- Generavimas ----------------
+def version_string():
+    """Trumpas versijos kodas (git commit) ir sugeneravimo laikas – rodomas admine."""
+    sha = (os.environ.get("GITHUB_SHA") or "")[:7]
+    if not sha:
+        try:
+            sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=str(ROOT),
+                                          stderr=subprocess.DEVNULL).decode().strip()
+        except Exception:
+            sha = "vietinė"
+    try:
+        from zoneinfo import ZoneInfo
+        now = datetime.datetime.now(ZoneInfo("Europe/Vilnius"))
+    except Exception:
+        now = datetime.datetime.utcnow()
+    return "%s · %s" % (sha, now.strftime("%Y-%m-%d %H:%M"))
+
+
 def build():
     for d in (SRC, PAGES, DATA, IMG):
         d.mkdir(exist_ok=True)
@@ -444,6 +463,7 @@ def build():
     shutil.copytree(IMG, OUT / "nuotraukos")
     if (ROOT / "admin").exists():
         shutil.copytree(ROOT / "admin", OUT / "admin")
+        (OUT / "admin" / "versija.js").write_text('window.RM_VERSION = "%s";\n' % version_string(), encoding="utf-8")
 
     (OUT / "404.html").write_text(layout("Puslapis nerastas", "Puslapis nerastas",
         '<div class="wrap" style="padding:90px 0;text-align:center"><h1>Puslapis nerastas</h1><p style="margin:16px 0 24px;color:#94a3b8">Tokio adreso nėra.</p><a class="btn btn-primary" href="index.html">Į pradžią</a></div>', 0), encoding="utf-8")

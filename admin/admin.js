@@ -24,6 +24,7 @@
   var appEl = document.getElementById('app');
   var toastEl = document.getElementById('toast');
   var viewEl = null;
+  function verHtml() { return '<div class="ver">Versija: ' + esc(window.RM_VERSION || 'vietinė') + '</div>'; }
 
   // ---------- pagalbinės ----------
   function esc(s) {
@@ -184,7 +185,7 @@
       '<p>Įklijuokite GitHub raktą (token) su leidimu <b>Contents: Read and write</b> saugyklai <b>remaster</b>. Raktas saugomas tik šiame naršyklės įrenginyje.</p>' +
       '<div class="f"><input type="text" id="tok" placeholder="github_pat_..." autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
       '<button class="btn" id="go" style="width:100%"><i class="fa-solid fa-right-to-bracket"></i> Prisijungti</button>' +
-      '</div></div>';
+      verHtml() + '</div></div>';
     var go = document.getElementById('go');
     go.onclick = function () {
       var t = document.getElementById('tok').value.trim();
@@ -223,7 +224,7 @@
       '<div class="brand"><div class="brand-ico"><i class="fa-solid fa-microchip"></i></div><div><small>Kompiuterių taisykla</small><b>REMASTER.LT</b></div></div>' +
       '<nav class="nav">' + nav + '<hr><a href="../index.html" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i><span>Atidaryti svetainę</span></a></nav>' +
       '<div class="side-foot"><div class="avatar">T</div><div class="who"><b>Valdytojas</b><small>Svetainės redaktorius</small></div>' +
-      '<button class="icon-btn" id="logout" title="Atsijungti"><i class="fa-solid fa-right-from-bracket"></i></button></div>' +
+      '<button class="icon-btn" id="logout" title="Atsijungti"><i class="fa-solid fa-right-from-bracket"></i></button></div>' + verHtml() +
       '</aside><div class="scrim" id="scrim"></div>' +
       '<main class="main"><div class="topbar"><button class="icon-btn" id="burger"><i class="fa-solid fa-bars"></i></button><b>Remaster.lt valdymas</b></div><div id="view"></div></main></div>';
     viewEl = document.getElementById('view');
