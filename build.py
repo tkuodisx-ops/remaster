@@ -136,6 +136,7 @@ def parse_article(path):
     meta.setdefault("data", datetime.date.fromtimestamp(path.stat().st_mtime).isoformat())
     meta.setdefault("aprasymas", "")
     meta.setdefault("nuotrauka", "")
+    meta["nuotrauka"] = meta["nuotrauka"].replace("\\", "/").split("nuotraukos/")[-1].strip()
     meta["slug"] = slugify(path.stem)
     meta["body"] = body
     return meta
@@ -333,11 +334,13 @@ def build():
     for f in ("stilius.css", "script.js"):
         shutil.copy(ROOT / f, OUT / f)
     shutil.copytree(IMG, OUT / "nuotraukos")
+    if (ROOT / "admin").exists():
+        shutil.copytree(ROOT / "admin", OUT / "admin")
 
     # 404 ir robots
     (OUT / "404.html").write_text(layout("Puslapis nerastas", "Puslapis nerastas",
         '<div class="wrap" style="padding:90px 0;text-align:center"><h1>Puslapis nerastas</h1><p style="margin:16px 0 24px;color:#94a3b8">Tokio adreso nėra.</p><a class="btn btn-primary" href="index.html">Į pradžią</a></div>', 0), encoding="utf-8")
-    robots = "User-agent: *\nAllow: /\n"
+    robots = "User-agent: *\nAllow: /\nDisallow: /admin/\n"
     if SITE["url"]:
         base = SITE["url"].rstrip("/")
         urls = [base + "/", base + "/straipsniai/index.html"] + ["%s/straipsniai/%s.html" % (base, a["slug"]) for a in articles]
