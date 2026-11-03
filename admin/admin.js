@@ -531,17 +531,10 @@
   function settingsView() {
     loading(viewEl);
     var def = { name: 'Remaster.lt', email: 'info@remaster.lt', phone: '', whatsapp: '', messenger: '', city: 'Vilnius, Lietuva', address: '', hours: '', url: '', forma_url: '' };
-    Promise.all([
-      loadJson('duomenys/nustatymai.json', def),
-      api('GET', '/pages').catch(function () { return undefined; })   // undefined = nėra teisės skaityti
-    ]).then(function (res) {
-      var s = Object.assign({}, def, res[0]), pg = res[1];
-      var domain = normDomain(s.url);
-      var current = pg && pg.html_url ? pg.html_url : 'https://' + REPO.split('/')[0] + '.github.io/' + REPO.split('/')[1] + '/';
-      var pagesCname = pg && pg.cname ? pg.cname : '';
-      var cert = pg && pg.https_certificate && pg.https_certificate.state ? pg.https_certificate.state : '';
+    loadJson('duomenys/nustatymai.json', def).then(function (res) {
+      var s = Object.assign({}, def, res);
       viewEl.innerHTML =
-        '<h1 class="title">Nustatymai</h1><div class="sub">Kontaktai ir svetainės adresas.</div>' +
+        '<h1 class="title">Nustatymai</h1><div class="sub">Kontaktai ir svetainės duomenys.</div>' +
         '<div class="card">' +
         '<div class="f"><label>Svetainės pavadinimas</label><input type="text" id="s-name" value="' + esc(s.name) + '" placeholder="Remaster.lt"><small>Rodomas logotipe, antraštėje, apačioje ir kontaktuose. Pvz. Remaster.lt, Remasteris ar bet kuris kitas. Dalis po paskutinio taško logotipe paryškinama mėlyna.</small></div>' +
         '<div class="f"><label>El. paštas</label><input type="text" id="s-email" value="' + esc(s.email) + '"></div>' +
@@ -552,18 +545,9 @@
         '<div class="f"><label>Adresas (nebūtina)</label><input type="text" id="s-addr" value="' + esc(s.address) + '" placeholder="Gatvė ir namo numeris"><small>Rodomas kontaktuose su nuoroda į „Google“ žemėlapį ir „Google“ paieškai.</small></div>' +
         '<div class="f"><label>Darbo laikas (nebūtina)</label><textarea id="s-hours" style="min-height:80px" placeholder="I–V 9:00–18:00&#10;VI 10:00–15:00">' + esc(s.hours) + '</textarea></div>' +
         '<div class="f"><label>Supirkimo užklausų adresas (Google Apps Script)</label><input type="text" id="s-forma" value="' + esc(s.forma_url) + '" placeholder="https://script.google.com/macros/s/.../exec"><small>Kai įrašysite, svetainės supirkimo forma siųs užklausas į jūsų lentelę, o jas matysite skiltyje „Supirkimas“.</small></div>' +
-        '<hr style="border:0;border-top:1px solid var(--line);margin:8px 0 20px">' +
-        '<h2 style="font-size:1.15rem;margin-bottom:6px">Svetainės adresas (domenas)</h2>' +
-        '<div class="sub" style="margin-bottom:14px">Dabar svetainė veikia adresu: <a href="' + esc(current) + '" target="_blank" rel="noopener" style="color:#5b9bff;text-decoration:underline">' + esc(current) + '</a>' +
-        (pagesCname ? '<br>Prijungtas domenas: <b>' + esc(pagesCname) + '</b>' + (cert ? ' (sertifikatas: ' + esc(cert) + ')' : '') : '') + '</div>' +
-        '<div class="f"><label>Domenas</label><input type="text" id="s-domain" value="' + esc(domain || pagesCname) + '" placeholder="remaster.lt" autocapitalize="off" autocomplete="off"><small>Įrašykite tik domeną, pvz. <b>remaster.lt</b>. Jei domeno dar neturite, palikite tuščią. Norėdami pakeisti į kitą, tiesiog įrašykite naują ir išsaugokite.</small></div>' +
-        '<div class="hint"><b>Svarbu:</b> keičiant domeną reikia 2 dalykų.<br>1) Domeno tiekėjo (kur jį užsisakėte) DNS nustatymuose: pagrindiniam domenui sukurkite <b>4 „A“ įrašus</b>: 185.199.108.153, 185.199.109.153, 185.199.110.153, 185.199.111.153, o „www“ – <b>CNAME</b> į <b>' + esc(REPO.split('/')[0]) + '.github.io</b>.<br>' +
-        '2) Jūsų GitHub rakte turi būti leidimas <b>Pages: Read and write</b> (GitHub → Settings → Developer settings → jūsų raktas → Permissions). Jei jo nėra, domeną galite įrašyti ir rankiniu būdu: saugykla → Settings → Pages → Custom domain.<br>Po DNS pakeitimų domenas pradeda veikti per kelias minutes iki kelių valandų. Po to saugykloje Settings → Pages įjunkite <b>Enforce HTTPS</b>.</div>' +
         '<div class="actions"><button class="btn" id="save"><i class="fa-solid fa-cloud-arrow-up"></i> Išsaugoti</button></div></div>';
       document.getElementById('save').onclick = function () {
         var btn = this;
-        var newDomain = normDomain(document.getElementById('s-domain').value);
-        if (newDomain && !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(newDomain)) return toast('Netinkamas domenas. Pvz.: remaster.lt', 'err');
         var out = {
           name: document.getElementById('s-name').value.trim() || 'Remaster.lt',
           email: document.getElementById('s-email').value.trim(),
@@ -573,21 +557,17 @@
           city: document.getElementById('s-city').value.trim(),
           address: document.getElementById('s-addr').value.trim(),
           hours: document.getElementById('s-hours').value.trim(),
-          url: newDomain ? 'https://' + newDomain : '',
+          url: s.url || '',
           forma_url: document.getElementById('s-forma').value.trim()
         };
         function reset() { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Išsaugoti'; }
         btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Saugoma...';
         saveText('duomenys/nustatymai.json', JSON.stringify(out, null, 2) + '\n', 'Atnaujinti nustatymai').then(function () {
-          if (newDomain === pagesCname || (pg === undefined && !newDomain)) return null;
-          return api('PUT', '/pages', { cname: newDomain || null }).then(function () { return 'domain'; });
-        }).then(function (r) {
           reset();
-          toast(r === 'domain' ? 'Išsaugota. Domenas pakeistas, svetainė atsinaujins per ~1 min.' : 'Išsaugota. Svetainė atsinaujins per ~1 min.', 'ok');
-          if (r === 'domain') settingsView();
+          toast('Išsaugota. Svetainė atsinaujins per ~1 min.', 'ok');
         }).catch(function (e) {
           reset();
-          toast('Nustatymai išsaugoti, bet domeno prijungti nepavyko: ' + e.message + '. Pridėkite rakte „Pages: Read and write“ arba įrašykite domeną rankiniu būdu GitHub Settings → Pages.', 'err');
+          toast('Nepavyko išsaugoti: ' + e.message, 'err');
         });
       };
     }).catch(function (e) { viewEl.innerHTML = ''; fail(e); });
