@@ -55,7 +55,7 @@ function doGet(e) {
   }
   var items = [];
   for (var j = 1; j < rows.length; j++) {
-    items.push({ id: String(rows[j][0]), laikas: String(rows[j][1]), irenginys: rows[j][2], kontaktas: rows[j][3], busena: rows[j][4] });
+    items.push({ id: String(rows[j][0]), laikas: (rows[j][1] instanceof Date) ? Utilities.formatDate(rows[j][1], 'Europe/Vilnius', 'yyyy-MM-dd HH:mm') : String(rows[j][1]), irenginys: rows[j][2], kontaktas: rows[j][3], busena: rows[j][4] });
   }
   items.reverse();
   return out_({ ok: true, items: items });
