@@ -35,6 +35,7 @@ SITE = {
     "phone": "",
     "city": "Vilnius, Lietuva",
     "url": "",
+    "forma_url": "",      # Google Apps Script adresas supirkimo užklausoms (nustatoma per /admin/)
 }
 
 DEFAULT_SERVICES = [
@@ -327,14 +328,15 @@ def index_page(articles, services):
       <li><i class="fa-solid fa-circle-check"></i><span>Atsiskaitymas iš karto vietoje</span></li>
     </ul>
   </div>
-  <form class="form" id="supirkimo-forma" data-email="{email}">
+  <form class="form" id="supirkimo-forma" data-email="{email}" data-endpoint="{endpoint}">
     <h3>Pasiūlykite savo kompiuterį</h3>
     <div><label for="pc">Kompiuterio modelis / specifikacijos</label>
       <textarea id="pc" name="pc" rows="3" required placeholder="pvz. Ryzen 5 5600X, RTX 3060..."></textarea></div>
     <div><label for="kontaktas">Jūsų telefonas arba el. paštas</label>
       <input id="kontaktas" name="kontaktas" type="text" required placeholder="+370 600 00000"></div>
+    <div class="hp" aria-hidden="true"><label>Neužpildykite</label><input type="text" name="website" tabindex="-1" autocomplete="off"></div>
     <button class="btn btn-primary" type="submit">Gauti kainos pasiūlymą</button>
-    <small>Paspaudus atsidarys jūsų el. pašto programa su paruoštu laišku.</small>
+    <small id="form-note">{note}</small>
   </form>
 </div></section>
 
@@ -348,6 +350,8 @@ def index_page(articles, services):
   {contacts}
 </div></section>
 """.format(email=html.escape(SITE["email"]), grid=grid, name=SITE["name"], contacts=contact_block(),
+           endpoint=html.escape(SITE["forma_url"]),
+           note=("Atsakysime kuo greičiau." if SITE["forma_url"] else "Paspaudus atsidarys jūsų el. pašto programa su paruoštu laišku."),
            services=services_block(services), prices=prices_html,
            buy_cls=buy_cls, art_cls=art_cls, cont_cls=cont_cls)
     return layout("Remaster.lt – Kompiuterių remontas, diagnostika ir supirkimas Vilniuje",

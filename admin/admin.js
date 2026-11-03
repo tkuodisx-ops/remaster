@@ -204,6 +204,7 @@
   // ---------- karkasas ----------
   var NAV = [
     ['straipsniai', 'newspaper', 'Straipsniai'],
+    ['supirkimas', 'bag-shopping', 'Supirkimas'],
     ['puslapiai', 'file-lines', 'Puslapiai'],
     '-',
     ['paslaugos', 'screwdriver-wrench', 'Paslaugos'],
@@ -249,6 +250,7 @@
     if (v === 'paslaugos') return servicesView();
     if (v === 'kainos') return pricesView();
     if (v === 'nustatymai') return settingsView();
+    if (v === 'supirkimas') return buyView();
     location.hash = '#/straipsniai';
   }
 
@@ -512,7 +514,7 @@
 
   function settingsView() {
     loading(viewEl);
-    var def = { email: 'info@remaster.lt', phone: '', city: 'Vilnius, Lietuva', url: '' };
+    var def = { email: 'info@remaster.lt', phone: '', city: 'Vilnius, Lietuva', url: '', forma_url: '' };
     loadJson('duomenys/nustatymai.json', def).then(function (s) {
       s = Object.assign({}, def, s);
       viewEl.innerHTML =
@@ -522,6 +524,7 @@
         '<div class="f"><label>Telefonas</label><input type="text" id="s-phone" value="' + esc(s.phone) + '" placeholder="+370 600 00000"><small>Palikite tuščią, jei nenorite rodyti telefono.</small></div>' +
         '<div class="f"><label>Vieta</label><input type="text" id="s-city" value="' + esc(s.city) + '"></div>' +
         '<div class="f"><label>Svetainės adresas (nebūtina)</label><input type="text" id="s-url" value="' + esc(s.url) + '" placeholder="https://remaster.lt"><small>Naudojamas Google žemėlapiui (sitemap.xml).</small></div>' +
+        '<div class="f"><label>Supirkimo užklausų adresas (Google Apps Script)</label><input type="text" id="s-forma" value="' + esc(s.forma_url) + '" placeholder="https://script.google.com/macros/s/.../exec"><small>Kai įrašysite, svetainės supirkimo forma siųs užklausas į jūsų lentelę, o jas matysite skiltyje „Supirkimas“.</small></div>' +
         '<div class="actions"><button class="btn" id="save"><i class="fa-solid fa-cloud-arrow-up"></i> Išsaugoti</button></div></div>';
       document.getElementById('save').onclick = function () {
         var btn = this;
@@ -529,7 +532,8 @@
           email: document.getElementById('s-email').value.trim(),
           phone: document.getElementById('s-phone').value.trim(),
           city: document.getElementById('s-city').value.trim(),
-          url: document.getElementById('s-url').value.trim()
+          url: document.getElementById('s-url').value.trim(),
+          forma_url: document.getElementById('s-forma').value.trim()
         };
         btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Saugoma...';
         saveText('duomenys/nustatymai.json', JSON.stringify(out, null, 2) + '\n', 'Atnaujinti nustatymai').then(function () {
@@ -538,6 +542,70 @@
         }).catch(function (e) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Išsaugoti'; fail(e); });
       };
     }).catch(function (e) { viewEl.innerHTML = ''; fail(e); });
+  }
+
+  // ---------- supirkimo užklausos ----------
+  var BUY_KEY = 'rm_buy_key';
+  function buyCall(url, params) {
+    var q = Object.keys(params).map(function (k) { return k + '=' + encodeURIComponent(params[k]); }).join('&');
+    return fetch(url + (url.indexOf('?') > -1 ? '&' : '?') + q + '&_=' + Date.now()).then(function (r) { return r.json(); });
+  }
+  function contactLinks(k) {
+    var v = String(k || '').trim();
+    if (v.indexOf('@') > -1) return '<a class="btn sm" href="mailto:' + esc(v) + '"><i class="fa-solid fa-envelope"></i> Rašyti</a>';
+    var tel = v.replace(/[^\d+]/g, '');
+    return tel ? '<a class="btn sm" href="tel:' + esc(tel) + '"><i class="fa-solid fa-phone"></i> Skambinti</a>' : '';
+  }
+  function buyView() {
+    loading(viewEl);
+    loadJson('duomenys/nustatymai.json', {}).then(function (s) {
+      var url = (s && s.forma_url) || '';
+      var key = ''; try { key = localStorage.getItem(BUY_KEY) || ''; } catch (e) { }
+      var head = '<h1 class="title">Supirkimas</h1><div class="sub">Svetainėje pateiktos įrangos supirkimo užklausos.</div>';
+      if (!url) {
+        viewEl.innerHTML = head + '<div class="card"><div class="hint">Užklausų priėmimas dar nesukonfigūruotas. Reikia vieną kartą nustatyti nemokamą „Google“ lentelę su Apps Script. Kai turėsite jos adresą, įrašykite jį skiltyje <a href="#/nustatymai" style="text-decoration:underline">Nustatymai</a>.</div>' +
+          '<p style="color:#c3c3cc">Kol to nepadaryta, svetainės forma atidaro el. pašto programą su paruoštu laišku.</p></div>';
+        return;
+      }
+      if (!key) {
+        viewEl.innerHTML = head + '<div class="card"><div class="f"><label>Slaptas raktas</label><input type="text" id="bk" autocomplete="off" autocapitalize="off" placeholder="raktas iš Apps Script kodo (KEY)"><small>Įrašomas tik šiame įrenginyje.</small></div>' +
+          '<div class="actions"><button class="btn" id="bk-ok">Tęsti</button></div></div>';
+        document.getElementById('bk-ok').onclick = function () {
+          var v = document.getElementById('bk').value.trim(); if (!v) return;
+          try { localStorage.setItem(BUY_KEY, v); } catch (e) { }
+          buyView();
+        };
+        return;
+      }
+      viewEl.innerHTML = head + '<div class="bar"><button class="btn ghost sm" id="rf"><i class="fa-solid fa-rotate"></i> Atnaujinti</button><span class="grow"></span><button class="btn ghost sm" id="bk-reset">Pakeisti raktą</button></div><div id="reqs"></div>';
+      var box = document.getElementById('reqs');
+      document.getElementById('rf').onclick = buyView;
+      document.getElementById('bk-reset').onclick = function () { try { localStorage.removeItem(BUY_KEY); } catch (e) { } buyView(); };
+      loading(box);
+      buyCall(url, { key: key }).then(function (r) {
+        if (!r.ok) {
+          box.innerHTML = '<div class="empty">' + (r.error === 'key' ? 'Neteisingas raktas. Spauskite „Pakeisti raktą“.' : 'Klaida gaunant duomenis.') + '</div>';
+          return;
+        }
+        if (!r.items.length) { box.innerHTML = '<div class="empty">Užklausų kol kas nėra.</div>'; return; }
+        box.innerHTML = r.items.map(function (it) {
+          var done = it.busena !== 'Naujas';
+          return '<div class="req" data-id="' + esc(it.id) + '"><div class="top"><span class="pill ' + (done ? 'draft' : 'c0') + '">' + esc(it.busena || 'Naujas') + '</span><small>' + esc(it.laikas) + '</small></div>' +
+            '<div class="desc">' + esc(it.irenginys) + '</div>' +
+            '<div class="contact"><span class="who">' + esc(it.kontaktas) + '</span>' + contactLinks(it.kontaktas) +
+            '<button class="btn ghost sm" data-a="st" data-v="' + (done ? 'Naujas' : 'Perziureta') + '">' + (done ? 'Grąžinti į naujas' : 'Pažymėti peržiūrėta') + '</button>' +
+            '<button class="btn danger sm" data-a="del"><i class="fa-regular fa-trash-can"></i></button></div></div>';
+        }).join('');
+        box.onclick = function (e) {
+          var b = e.target.closest('button[data-a]'); if (!b) return;
+          var id = b.closest('.req').getAttribute('data-id'), a = b.getAttribute('data-a');
+          if (a === 'del' && !confirm('Ištrinti šią užklausą?')) return;
+          b.disabled = true;
+          buyCall(url, a === 'del' ? { key: key, action: 'delete', id: id } : { key: key, action: 'status', id: id, value: b.getAttribute('data-v') })
+            .then(function (r2) { if (!r2.ok) throw new Error('Nepavyko'); buyView(); }).catch(fail);
+        };
+      }).catch(function () { box.innerHTML = '<div class="empty">Nepavyko pasiekti Apps Script adreso. Patikrinkite jį skiltyje Nustatymai.</div>'; });
+    }).catch(fail);
   }
 
   // ---------- paleidimas ----------

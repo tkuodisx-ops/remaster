@@ -117,3 +117,10 @@ h1.title{font-size:1.5rem;font-weight:700;margin-bottom:6px}
   .btn{padding:14px 18px}
   .cover img,.cover .ph{width:130px;height:74px}
 }
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.req{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.req .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.req .top small{color:var(--muted);flex:1}
+.req .desc{white-space:pre-wrap;word-break:break-word;margin-bottom:12px}
+.req .contact{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.req .who{font-weight:700}
