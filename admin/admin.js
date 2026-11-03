@@ -207,7 +207,7 @@
     ['puslapiai', 'file-lines', 'Puslapiai'],
     '-',
     ['paslaugos', 'screwdriver-wrench', 'Paslaugos'],
-    ['kainos', 'tags', 'Kainos'],
+    ['kainos', 'tags', 'Kitos kainos'],
     ['nustatymai', 'gear', 'Nustatymai']
   ];
 
@@ -494,14 +494,16 @@
     listEditor({
       file: 'duomenys/paslaugos.json', msg: 'Atnaujintos paslaugos',
       title: 'Paslaugos', sub: 'Paslaugų kortelės pagrindiniame puslapyje.', one: 'Paslauga',
-      def: [], blank: function () { return { ikona: 'screwdriver-wrench', pavadinimas: '', aprasymas: '' }; },
-      fields: [{ k: 'ikona', t: 'icon', l: 'Piktograma' }, { k: 'pavadinimas', t: 'text', l: 'Pavadinimas' }, { k: 'aprasymas', t: 'area', l: 'Aprašymas' }]
+      hint: 'Jei užpildysite „Kainą“, ji automatiškai atsiras paslaugos kortelėje ir kainų lentelėje, o rašyti jos dar kartą skiltyje „Kainos“ nereikia.',
+      def: [], blank: function () { return { ikona: 'screwdriver-wrench', pavadinimas: '', aprasymas: '', kaina: '', kainos_pastaba: '' }; },
+      fields: [{ k: 'ikona', t: 'icon', l: 'Piktograma' }, { k: 'pavadinimas', t: 'text', l: 'Pavadinimas' }, { k: 'aprasymas', t: 'area', l: 'Aprašymas' },
+        { k: 'kaina', t: 'text', l: 'Kaina (nebūtina)', ph: 'nuo 30 €' }, { k: 'kainos_pastaba', t: 'text', l: 'Kainos pastaba (nebūtina)', ph: 'pvz. kaina su darbu' }]
     });
   }
   function pricesView() {
     listEditor({
       file: 'duomenys/kainos.json', msg: 'Atnaujintos kainos',
-      title: 'Kainos', sub: 'Kainų lentelė. Jei sąrašas tuščias, kainų skiltis svetainėje nerodoma.', one: 'Kaina',
+      title: 'Kitos kainos', sub: 'Papildomos kainos, kurių nėra tarp paslaugų. Kainos, įrašytos prie paslaugų, į lentelę patenka automatiškai.', one: 'Kaina',
       hint: 'Kainas rašykite taip, kaip norite rodyti, pvz. „nuo 25 €“ arba „30–50 €“.',
       def: [], blank: function () { return { pavadinimas: '', kaina: '', pastaba: '' }; },
       fields: [{ k: 'pavadinimas', t: 'text', l: 'Paslauga' }, { k: 'kaina', t: 'text', l: 'Kaina', ph: 'nuo 25 €' }, { k: 'pastaba', t: 'text', l: 'Pastaba (nebūtina)' }]

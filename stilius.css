@@ -137,3 +137,4 @@ footer{background:#020617;border-top:1px solid #0f172a;padding:24px 0;text-align
 .pval{font-weight:800;color:var(--blue3);white-space:nowrap}
 .foot-links{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
 .foot-links a:hover{color:var(--blue3)}
+.cprice{margin-top:14px;display:inline-block;background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.3);padding:3px 12px;border-radius:99px;font-size:.85rem;font-weight:700}

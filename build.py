@@ -256,8 +256,9 @@ def services_block(services):
     cards = []
     for s in services:
         icon = re.sub(r"[^a-z0-9-]", "", str(s.get("ikona", "screwdriver-wrench")).lower()) or "screwdriver-wrench"
-        cards.append('<div class="card"><div class="ico"><i class="fa-solid fa-%s"></i></div><h3>%s</h3><p>%s</p></div>' % (
-            icon, html.escape(s.get("pavadinimas", "")), html.escape(s.get("aprasymas", ""))))
+        price = '<div class="cprice">%s</div>' % html.escape(s["kaina"]) if s.get("kaina") else ""
+        cards.append('<div class="card"><div class="ico"><i class="fa-solid fa-%s"></i></div><h3>%s</h3><p>%s</p>%s</div>' % (
+            icon, html.escape(s.get("pavadinimas", "")), html.escape(s.get("aprasymas", "")), price))
     return "".join(cards)
 
 
@@ -410,7 +411,11 @@ def build():
 
     SITE.update({k: v for k, v in load_json("nustatymai.json", {}).items() if k in SITE and isinstance(v, str)})
     services = load_json("paslaugos.json", DEFAULT_SERVICES) or DEFAULT_SERVICES
-    CTX["prices"] = [r for r in load_json("kainos.json", []) if r.get("pavadinimas")]
+    # kainų lentelė: paslaugos su kaina + papildomos kainos (be pasikartojimų)
+    from_services = [{"pavadinimas": s.get("pavadinimas", ""), "kaina": s["kaina"], "pastaba": s.get("kainos_pastaba", "")}
+                     for s in services if s.get("kaina") and s.get("pavadinimas")]
+    extra = [r for r in load_json("kainos.json", []) if r.get("pavadinimas")]
+    CTX["prices"] = from_services + extra
 
     if OUT.exists():
         shutil.rmtree(OUT)
