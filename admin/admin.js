@@ -204,18 +204,18 @@
   // ---------- karkasas ----------
   var NAV = [
     ['straipsniai', 'newspaper', 'Straipsniai'],
-    ['supirkimas', 'bag-shopping', 'Supirkimas'],
+    ['supirkimas', 'hand-holding-dollar', 'Supirkimas'],
     ['puslapiai', 'file-lines', 'Puslapiai'],
     '-',
     ['paslaugos', 'screwdriver-wrench', 'Paslaugos'],
-    ['kainos', 'tags', 'Kitos kainos'],
+    ['kainos', 'euro-sign', 'Kitos kainos'],
     ['nustatymai', 'gear', 'Nustatymai']
   ];
 
   function renderShell() {
     var nav = NAV.map(function (n) {
       if (n === '-') return '<hr>';
-      return '<a href="#/' + n[0] + '" data-v="' + n[0] + '"><i class="fa-regular fa-' + n[1] + '"></i><span>' + n[2] + '</span></a>';
+      return '<a href="#/' + n[0] + '" data-v="' + n[0] + '"><i class="fa-solid fa-' + n[1] + '"></i><span>' + n[2] + '</span></a>';
     }).join('');
     appEl.innerHTML =
       '<div class="shell">' +
