@@ -3,7 +3,7 @@ backend:
   repo: tkuodisx-ops/remaster
   branch: main
 
-site_url: /remaster/
+site_url: https://tkuodisx-ops.github.io/remaster/
 media_folder: nuotraukos
 public_folder: /nuotraukos
 locale: lt
@@ -20,7 +20,8 @@ collections:
     extension: md
     format: frontmatter
     create: true
-    slug: "{{year}}-{{month}}-{{day}}-{{title}}"
+    identifier_field: pavadinimas
+    slug: "{{year}}-{{month}}-{{day}}-{{pavadinimas}}"
     summary: "{{pavadinimas}} ({{data}})"
     sortable_fields: [data, pavadinimas]
     fields:
