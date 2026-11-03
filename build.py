@@ -463,7 +463,15 @@ def build():
     shutil.copytree(IMG, OUT / "nuotraukos")
     if (ROOT / "admin").exists():
         shutil.copytree(ROOT / "admin", OUT / "admin")
-        (OUT / "admin" / "versija.js").write_text('window.RM_VERSION = "%s";\n' % version_string(), encoding="utf-8")
+        ver = version_string()
+        (OUT / "admin" / "versija.js").write_text('window.RM_VERSION = "%s";\n' % ver, encoding="utf-8")
+        # talpyklos apėjimas: failų adresams pridedame versiją, kad naršyklė visada paimtų naujausius
+        tag = re.sub(r"[^a-zA-Z0-9]", "", ver)
+        idx = OUT / "admin" / "index.html"
+        page = idx.read_text(encoding="utf-8")
+        for f in ("admin.css", "admin.js", "versija.js"):
+            page = page.replace('"%s"' % f, '"%s?v=%s"' % (f, tag))
+        idx.write_text(page, encoding="utf-8")
 
     (OUT / "404.html").write_text(layout("Puslapis nerastas", "Puslapis nerastas",
         '<div class="wrap" style="padding:90px 0;text-align:center"><h1>Puslapis nerastas</h1><p style="margin:16px 0 24px;color:#94a3b8">Tokio adreso nėra.</p><a class="btn btn-primary" href="index.html">Į pradžią</a></div>', 0), encoding="utf-8")
