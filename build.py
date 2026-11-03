@@ -22,6 +22,7 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parent
 SRC = ROOT / "straipsniai"
@@ -37,6 +38,10 @@ SITE = {
     "phone": "",
     "city": "Vilnius, Lietuva",
     "url": "",
+    "address": "",
+    "hours": "",
+    "whatsapp": "",
+    "messenger": "",
     "forma_url": "",      # Google Apps Script adresas supirkimo užklausoms (nustatoma per /admin/)
 }
 
@@ -57,7 +62,7 @@ LT_MAP = str.maketrans({
     "Ą": "a", "Č": "c", "Ę": "e", "Ė": "e", "Į": "i", "Š": "s", "Ų": "u", "Ū": "u", "Ž": "z",
 })
 
-CTX = {"prices": [], "pages": []}   # užpildoma build() metu
+CTX = {"prices": [], "pages": [], "faq": []}   # užpildoma build() metu
 
 
 def slugify(text):
@@ -183,7 +188,38 @@ def brand_html():
     return html.escape(n)
 
 
-def layout(title, desc, content, depth, active=""):
+def site_base():
+    """Svetainės bazinis adresas (nustatytas domenas arba GitHub Pages adresas)."""
+    if SITE["url"]:
+        return SITE["url"].rstrip("/")
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if "/" in repo:
+        o, r = repo.split("/", 1)
+        return "https://%s.github.io/%s" % (o.lower(), r)
+    return ""
+
+
+def ld_json(obj):
+    return '<script type="application/ld+json">%s</script>' % json.dumps(obj, ensure_ascii=False).replace("</", "<\\/")
+
+
+def mobile_bar():
+    btns = []
+    if SITE["phone"]:
+        btns.append('<a class="mb-call" href="tel:%s"><i class="fa-solid fa-phone"></i> Skambinti</a>' % re.sub(r"[^\d+]", "", SITE["phone"]))
+    if SITE["whatsapp"]:
+        digits = re.sub(r"\D", "", SITE["whatsapp"])
+        if digits:
+            btns.append('<a class="mb-wa" href="https://wa.me/%s" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>' % digits)
+    if SITE["messenger"]:
+        m = SITE["messenger"].strip()
+        link = m if m.startswith("http") else "https://m.me/" + m.lstrip("@/")
+        btns.append('<a class="mb-ms" href="%s" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-messenger"></i> Messenger</a>' % html.escape(link))
+    btns.append('<a class="mb-mail" href="mailto:%s"><i class="fa-solid fa-envelope"></i> Rašyti</a>' % html.escape(SITE["email"]))
+    return '<div class="mbar n%d">%s</div>' % (len(btns), "".join(btns))
+
+
+def layout(title, desc, content, depth, active="", path=None, head_extra=""):
     p = "../" * depth
     home = p + "index.html"
 
@@ -196,6 +232,8 @@ def layout(title, desc, content, depth, active=""):
         menu += a(home + "#kainos", "Kainos", "kainos")
     menu += a(home + "#supirkimas", "Supirkimas", "supirkimas")
     menu += a(p + "straipsniai/index.html", "Straipsniai", "straipsniai")
+    if CTX["faq"]:
+        menu += a(home + "#duk", "D.U.K.", "duk")
     menu += a(home + "#kontaktai", "Kontaktai", "kontaktai")
 
     foot_links = "".join('<a href="%spuslapiai/%s.html">%s</a>' % (p, pg["slug"], html.escape(pg["pavadinimas"]))
@@ -203,6 +241,16 @@ def layout(title, desc, content, depth, active=""):
     foot_links = ('<div class="foot-links">%s</div>' % foot_links) if foot_links else ""
 
     full_title = title if title.startswith(SITE["name"]) else "%s | %s" % (title, SITE["name"])
+
+    base = site_base()
+    seo = ""
+    if base and path is not None:
+        url = base + "/" + path
+        img = base + "/og.png"
+        seo = ('<link rel="canonical" href="%s">\n<meta property="og:url" content="%s">\n'
+               '<meta property="og:image" content="%s">\n<meta name="twitter:card" content="summary_large_image">\n'
+               '<meta name="twitter:image" content="%s">\n') % (url, url, img, img)
+
     return """<!DOCTYPE html>
 <html lang="lt">
 <head>
@@ -210,14 +258,17 @@ def layout(title, desc, content, depth, active=""):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title}</title>
 <meta name="description" content="{desc}">
+<meta name="theme-color" content="#0f172a">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="lt_LT">
+{seo}<link rel="icon" type="image/svg+xml" href="{p}favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{p}stilius.css">
-</head>
+{head_extra}</head>
 <body>
 <nav class="nav">
   <div class="wrap nav-inner">
@@ -233,10 +284,12 @@ def layout(title, desc, content, depth, active=""):
 {content}
 </main>
 <footer><div class="wrap">{foot_links}&copy; {year} {name} – Visos teisės saugomos.</div></footer>
+{mbar}
 <script src="{p}script.js"></script>
 </body>
 </html>""".format(
-        title=html.escape(full_title), desc=html.escape(desc), p=p, home=home, content=content,
+        title=html.escape(full_title), desc=html.escape(desc), p=p, home=home, content=content, seo=seo,
+        head_extra=head_extra, mbar=mobile_bar(),
         menu=menu, foot_links=foot_links, year=datetime.date.today().year, name=html.escape(SITE["name"]), brand=brand_html())
 
 
@@ -253,15 +306,27 @@ def art_card(a, prefix):
 
 
 def contact_block():
-    phone = ""
+    cards = []
+    cards.append('<a class="contact" href="mailto:%s"><i class="fa-solid fa-envelope"></i><span>%s</span></a>' % (
+        html.escape(SITE["email"]), html.escape(SITE["email"])))
     if SITE["phone"]:
         tel = re.sub(r"[^\d+]", "", SITE["phone"])
-        phone = '<a class="contact" href="tel:%s"><i class="fa-solid fa-phone"></i><span>%s</span></a>' % (tel, html.escape(SITE["phone"]))
-    return """<div class="contacts">
-  <a class="contact" href="mailto:{email}"><i class="fa-solid fa-envelope"></i><span>{email}</span></a>
-  {phone}
-  <div class="contact"><i class="fa-solid fa-location-dot"></i><span>{city}</span></div>
-</div>""".format(email=html.escape(SITE["email"]), phone=phone, city=html.escape(SITE["city"]))
+        cards.append('<a class="contact" href="tel:%s"><i class="fa-solid fa-phone"></i><span>%s</span></a>' % (tel, html.escape(SITE["phone"])))
+    if SITE["whatsapp"] and re.sub(r"\D", "", SITE["whatsapp"]):
+        cards.append('<a class="contact" href="https://wa.me/%s" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>' % re.sub(r"\D", "", SITE["whatsapp"]))
+    if SITE["messenger"]:
+        m = SITE["messenger"].strip()
+        link = m if m.startswith("http") else "https://m.me/" + m.lstrip("@/")
+        cards.append('<a class="contact" href="%s" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-messenger"></i><span>Messenger</span></a>' % html.escape(link))
+    if SITE["address"]:
+        q = urllib.parse.quote("%s, %s" % (SITE["address"], SITE["city"]))
+        cards.append('<a class="contact" href="https://www.google.com/maps/search/?api=1&query=%s" target="_blank" rel="noopener"><i class="fa-solid fa-location-dot"></i><span>%s<small>Rodyti žemėlapyje</small></span></a>' % (
+            q, html.escape(SITE["address"] + ", " + SITE["city"])))
+    else:
+        cards.append('<div class="contact"><i class="fa-solid fa-location-dot"></i><span>%s</span></div>' % html.escape(SITE["city"]))
+    if SITE["hours"]:
+        cards.append('<div class="contact"><i class="fa-regular fa-clock"></i><span>%s</span></div>' % html.escape(SITE["hours"]).replace("\n", "<br>"))
+    return '<div class="contacts">%s</div>' % "".join(cards)
 
 
 def services_block(services):
@@ -274,7 +339,7 @@ def services_block(services):
     return "".join(cards)
 
 
-def prices_section(prices):
+def prices_section(prices, cls="s alt"):
     if not prices:
         return ""
     rows = []
@@ -282,10 +347,52 @@ def prices_section(prices):
         note = '<span class="pnote">%s</span>' % html.escape(r.get("pastaba", "")) if r.get("pastaba") else ""
         rows.append('<div class="price-row"><div class="pname">%s%s</div><div class="pval">%s</div></div>' % (
             html.escape(r.get("pavadinimas", "")), note, html.escape(r.get("kaina", ""))))
-    return """<section class="s alt" id="kainos"><div class="wrap">
+    return """<section class="%s" id="kainos"><div class="wrap">
   <div class="s-head"><span class="eyebrow">Skaidrios kainos</span><h2>Paslaugų kainos</h2><p>Galutinę kainą nustatome po diagnostikos, o apie ją pasakome iš anksto.</p></div>
   <div class="price-list">%s</div>
-</div></section>""" % "".join(rows)
+</div></section>""" % (cls, "".join(rows))
+
+
+def faq_section(cls):
+    if not CTX["faq"]:
+        return ""
+    items = "".join('<details><summary>%s</summary><p>%s</p></details>' % (
+        html.escape(q["klausimas"]), html.escape(q["atsakymas"]).replace("\n", "<br>")) for q in CTX["faq"])
+    return """<section class="%s" id="duk"><div class="wrap">
+  <div class="s-head"><span class="eyebrow">Atsakymai</span><h2>Dažniausi klausimai</h2></div>
+  <div class="faq">%s</div>
+</div></section>""" % (cls, items)
+
+
+def local_business_ld(services):
+    d = {"@context": "https://schema.org", "@type": "LocalBusiness", "name": SITE["name"],
+         "description": "Kompiuterių remontas, diagnostika, OS perrašymas ir kompiuterių supirkimas.",
+         "email": SITE["email"], "areaServed": SITE["city"].split(",")[0].strip() or "Vilnius"}
+    base = site_base()
+    if base:
+        d["url"] = base + "/"
+        d["image"] = base + "/og.png"
+    if SITE["phone"]:
+        d["telephone"] = SITE["phone"]
+    addr = {"@type": "PostalAddress", "addressLocality": SITE["city"].split(",")[0].strip() or "Vilnius", "addressCountry": "LT"}
+    if SITE["address"]:
+        addr["streetAddress"] = SITE["address"]
+    d["address"] = addr
+    if SITE["hours"]:
+        d["openingHours"] = SITE["hours"].replace("\n", "; ")
+    names = [s.get("pavadinimas") for s in services if s.get("pavadinimas")]
+    if names:
+        d["hasOfferCatalog"] = {"@type": "OfferCatalog", "name": "Paslaugos", "itemListElement": [
+            {"@type": "Offer", "itemOffered": {"@type": "Service", "name": n}} for n in names]}
+    return ld_json(d)
+
+
+def faq_ld():
+    if not CTX["faq"]:
+        return ""
+    return ld_json({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q["klausimas"], "acceptedAnswer": {"@type": "Answer", "text": q["atsakymas"]}}
+        for q in CTX["faq"]]})
 
 
 def index_page(articles, services):
@@ -295,11 +402,18 @@ def index_page(articles, services):
     else:
         grid = '<p class="empty">Straipsniai netrukus.</p>'
 
-    prices_html = prices_section(CTX["prices"])
-    # kainų sekcija keičia fono pasikaitaliojimą – supirkimas visada „alt" jei kainų nėra, kitaip paprastas
-    buy_cls = "s" if CTX["prices"] else "s alt"
-    art_cls = "s alt" if CTX["prices"] else "s"
-    cont_cls = "s" if CTX["prices"] else "s alt"
+    # sekcijų fonai kaitaliojasi automatiškai
+    order = ["paslaugos"] + (["kainos"] if CTX["prices"] else []) + ["supirkimas", "straipsniai"] + \
+            (["duk"] if CTX["faq"] else []) + ["kontaktai"]
+    cls = dict((k, "s alt" if i % 2 else "s") for i, k in enumerate(order))
+
+    prices_html = prices_section(CTX["prices"], cls.get("kainos", "s alt"))
+    faq_html = faq_section(cls.get("duk", "s"))
+
+    privacy = ""
+    if any(pg["slug"] == "privatumo-politika" for pg in CTX["pages"]):
+        privacy = ' Siųsdami sutinkate su <a href="puslapiai/privatumo-politika.html" style="text-decoration:underline">privatumo politika</a>.'
+    note = ("Atsakysime kuo greičiau." if SITE["forma_url"] else "Paspaudus atsidarys jūsų el. pašto programa su paruoštu laišku.") + privacy
 
     content = """
 <section class="hero"><div class="wrap hero-grid">
@@ -322,14 +436,14 @@ def index_page(articles, services):
   </div>
 </div></section>
 
-<section class="s" id="paslaugos"><div class="wrap">
+<section class="{c_pasl}" id="paslaugos"><div class="wrap">
   <div class="s-head"><h2>Mūsų paslaugos</h2><p>Profesionali pagalba jūsų staliniams ir nešiojamiesiems kompiuteriams.</p></div>
   <div class="grid3">{services}</div>
 </div></section>
 
 {prices}
 
-<section class="{buy_cls}" id="supirkimas"><div class="wrap two">
+<section class="{c_buy}" id="supirkimas"><div class="wrap two">
   <div>
     <span class="eyebrow">Greitas atsiskaitymas</span>
     <h2>Kompiuterių ir komponentų supirkimas</h2>
@@ -351,23 +465,24 @@ def index_page(articles, services):
   </form>
 </div></section>
 
-<section class="{art_cls}" id="straipsniai"><div class="wrap">
+<section class="{c_art}" id="straipsniai"><div class="wrap">
   <div class="s-head"><span class="eyebrow">Naudinga žinoti</span><h2>Patarimai ir straipsniai</h2><p>Praktiniai patarimai apie kompiuterių priežiūrą, temperatūras ir greitį.</p></div>
   {grid}
 </div></section>
 
-<section class="{cont_cls}" id="kontaktai"><div class="wrap">
+{faq}
+
+<section class="{c_cont}" id="kontaktai"><div class="wrap">
   <div class="s-head"><h2>Susisiekite su {name}</h2></div>
   {contacts}
 </div></section>
-""".format(email=html.escape(SITE["email"]), grid=grid, name=SITE["name"], contacts=contact_block(),
-           endpoint=html.escape(SITE["forma_url"]),
-           note=("Atsakysime kuo greičiau." if SITE["forma_url"] else "Paspaudus atsidarys jūsų el. pašto programa su paruoštu laišku."),
-           services=services_block(services), prices=prices_html,
-           buy_cls=buy_cls, art_cls=art_cls, cont_cls=cont_cls)
+""".format(email=html.escape(SITE["email"]), grid=grid, name=html.escape(SITE["name"]), contacts=contact_block(),
+           services=services_block(services), prices=prices_html, faq=faq_html,
+           endpoint=html.escape(SITE["forma_url"]), note=note,
+           c_pasl=cls["paslaugos"], c_buy=cls["supirkimas"], c_art=cls["straipsniai"], c_cont=cls["kontaktai"])
     return layout("%s – Kompiuterių remontas, diagnostika ir supirkimas Vilniuje" % SITE["name"],
                   "Profesionalios kompiuterių remonto paslaugos: OS perrašymas, diagnostika, profilaktika ir termo pastos keitimas, kompiuterių supirkimas Vilniuje.",
-                  content, 0)
+                  content, 0, path="", head_extra=local_business_ld(services) + faq_ld() + "\n")
 
 
 def list_page(articles):
@@ -386,7 +501,7 @@ def list_page(articles):
 <h1>Patarimai ir straipsniai</h1></div>
 %s
 <div style="padding-bottom:70px">%s</div></div>""" % (chips, grid)
-    return layout("Straipsniai", "Naudingi patarimai apie kompiuterių priežiūrą, remontą ir optimizavimą.", content, 1, "straipsniai")
+    return layout("Straipsniai", "Naudingi patarimai apie kompiuterių priežiūrą, remontą ir optimizavimą.", content, 1, "straipsniai", path="straipsniai/index.html")
 
 
 def article_page(a):
@@ -402,7 +517,14 @@ def article_page(a):
 <a class="btn btn-ghost" href="../index.html#kontaktai">Susisiekti</a></div>
 </article>""".format(title=html.escape(a["pavadinimas"]), date=fmt_date(a["data"]), hero=hero, cat=cat,
                      body=markdown(a["body"], "../"))
-    return layout(a["pavadinimas"], a["aprasymas"], content, 1, "straipsniai")
+    base = site_base()
+    ld = {"@context": "https://schema.org", "@type": "Article", "headline": a["pavadinimas"],
+          "datePublished": a["data"], "description": a["aprasymas"], "inLanguage": "lt",
+          "author": {"@type": "Organization", "name": SITE["name"]}}
+    if base and a["nuotrauka"]:
+        ld["image"] = "%s/nuotraukos/%s" % (base, a["nuotrauka"])
+    return layout(a["pavadinimas"], a["aprasymas"], content, 1, "straipsniai",
+                  path="straipsniai/%s.html" % a["slug"], head_extra=ld_json(ld) + "\n")
 
 
 def static_page(pg):
@@ -416,7 +538,7 @@ def static_page(pg):
 <div class="cta"><h3>Turite klausimų?</h3><p>Parašykite – mielai padėsime.</p>
 <a class="btn btn-ghost" href="../index.html#kontaktai">Susisiekti</a></div>
 </article>""".format(title=html.escape(pg["pavadinimas"]), hero=hero, body=markdown(pg["body"], "../"))
-    return layout(pg["pavadinimas"], pg["aprasymas"], content, 1)
+    return layout(pg["pavadinimas"], pg["aprasymas"], content, 1, path="puslapiai/%s.html" % pg["slug"])
 
 
 # ---------------- Generavimas ----------------
@@ -448,6 +570,7 @@ def build():
                      for s in services if s.get("kaina") and s.get("pavadinimas")]
     extra = [r for r in load_json("kainos.json", []) if r.get("pavadinimas")]
     CTX["prices"] = from_services + extra
+    CTX["faq"] = [q for q in load_json("duk.json", []) if q.get("klausimas") and q.get("atsakymas")]
 
     if OUT.exists():
         shutil.rmtree(OUT)
@@ -467,8 +590,9 @@ def build():
     for pg in pages:
         (OUT / "puslapiai" / (pg["slug"] + ".html")).write_text(static_page(pg), encoding="utf-8")
 
-    for f in ("stilius.css", "script.js"):
-        shutil.copy(ROOT / f, OUT / f)
+    for f in ("stilius.css", "script.js", "favicon.svg", "og.png"):
+        if (ROOT / f).exists():
+            shutil.copy(ROOT / f, OUT / f)
     shutil.copytree(IMG, OUT / "nuotraukos")
     if (ROOT / "admin").exists():
         shutil.copytree(ROOT / "admin", OUT / "admin")

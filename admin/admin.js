@@ -210,6 +210,7 @@
     '-',
     ['paslaugos', 'screwdriver-wrench', 'Paslaugos'],
     ['kainos', 'euro-sign', 'Kitos kainos'],
+    ['duk', 'circle-question', 'D.U.K.'],
     ['nustatymai', 'gear', 'Nustatymai']
   ];
 
@@ -250,6 +251,7 @@
     if (COLS[v]) return parts[1] ? editor(v, parts[1]) : listView(v);
     if (v === 'paslaugos') return servicesView();
     if (v === 'kainos') return pricesView();
+    if (v === 'duk') return faqView();
     if (v === 'nustatymai') return settingsView();
     if (v === 'supirkimas') return buyView();
     location.hash = '#/straipsniai';
@@ -482,7 +484,7 @@
         document.getElementById('add').onclick = function () { items.push(cfg.blank()); draw(); };
         document.getElementById('save').onclick = function () {
           var btn = this;
-          var clean = items.filter(function (it) { return (it.pavadinimas || '').trim(); });
+          var clean = items.filter(function (it) { return (it[cfg.req || 'pavadinimas'] || '').trim(); });
           btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Saugoma...';
           saveText(cfg.file, JSON.stringify(clean, null, 2) + '\n', cfg.msg).then(function () {
             items = clean;
@@ -516,9 +518,19 @@
   function normDomain(v) {
     return String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\s+/g, '');
   }
+  function faqView() {
+    listEditor({
+      file: 'duomenys/duk.json', msg: 'Atnaujinti D.U.K.',
+      title: 'D.U.K.', sub: 'Dažniausiai užduodami klausimai. Jei sąrašas tuščias, skiltis svetainėje nerodoma.', one: 'Klausimas',
+      req: 'klausimas',
+      hint: 'Rašykite trumpai ir aiškiai. Tai padeda klientams ir „Google“ paieškai. Pavyzdinius klausimus perskaitykite ir pakeiskite pagal savo praktiką.',
+      def: [], blank: function () { return { klausimas: '', atsakymas: '' }; },
+      fields: [{ k: 'klausimas', t: 'text', l: 'Klausimas' }, { k: 'atsakymas', t: 'area', l: 'Atsakymas' }]
+    });
+  }
   function settingsView() {
     loading(viewEl);
-    var def = { name: 'Remaster.lt', email: 'info@remaster.lt', phone: '', city: 'Vilnius, Lietuva', url: '', forma_url: '' };
+    var def = { name: 'Remaster.lt', email: 'info@remaster.lt', phone: '', whatsapp: '', messenger: '', city: 'Vilnius, Lietuva', address: '', hours: '', url: '', forma_url: '' };
     Promise.all([
       loadJson('duomenys/nustatymai.json', def),
       api('GET', '/pages').catch(function () { return undefined; })   // undefined = nėra teisės skaityti
@@ -534,7 +546,11 @@
         '<div class="f"><label>Svetainės pavadinimas</label><input type="text" id="s-name" value="' + esc(s.name) + '" placeholder="Remaster.lt"><small>Rodomas logotipe, antraštėje, apačioje ir kontaktuose. Pvz. Remaster.lt, Remasteris ar bet kuris kitas. Dalis po paskutinio taško logotipe paryškinama mėlyna.</small></div>' +
         '<div class="f"><label>El. paštas</label><input type="text" id="s-email" value="' + esc(s.email) + '"></div>' +
         '<div class="f"><label>Telefonas</label><input type="text" id="s-phone" value="' + esc(s.phone) + '" placeholder="+370 600 00000"><small>Palikite tuščią, jei nenorite rodyti telefono.</small></div>' +
-        '<div class="f"><label>Vieta</label><input type="text" id="s-city" value="' + esc(s.city) + '"></div>' +
+        '<div class="f"><label>WhatsApp numeris (nebūtina)</label><input type="text" id="s-wa" value="' + esc(s.whatsapp) + '" placeholder="+370 600 00000"><small>Jei įrašysite, telefone atsiras „WhatsApp“ mygtukas.</small></div>' +
+        '<div class="f"><label>Messenger (nebūtina)</label><input type="text" id="s-ms" value="' + esc(s.messenger) + '" placeholder="vartotojo vardas arba nuoroda"><small>Pvz. jūsų „Facebook“ puslapio vardas (m.me/<b>vardas</b>).</small></div>' +
+        '<div class="f"><label>Miestas</label><input type="text" id="s-city" value="' + esc(s.city) + '"></div>' +
+        '<div class="f"><label>Adresas (nebūtina)</label><input type="text" id="s-addr" value="' + esc(s.address) + '" placeholder="Gatvė ir namo numeris"><small>Rodomas kontaktuose su nuoroda į „Google“ žemėlapį ir „Google“ paieškai.</small></div>' +
+        '<div class="f"><label>Darbo laikas (nebūtina)</label><textarea id="s-hours" style="min-height:80px" placeholder="I–V 9:00–18:00&#10;VI 10:00–15:00">' + esc(s.hours) + '</textarea></div>' +
         '<div class="f"><label>Supirkimo užklausų adresas (Google Apps Script)</label><input type="text" id="s-forma" value="' + esc(s.forma_url) + '" placeholder="https://script.google.com/macros/s/.../exec"><small>Kai įrašysite, svetainės supirkimo forma siųs užklausas į jūsų lentelę, o jas matysite skiltyje „Supirkimas“.</small></div>' +
         '<hr style="border:0;border-top:1px solid var(--line);margin:8px 0 20px">' +
         '<h2 style="font-size:1.15rem;margin-bottom:6px">Svetainės adresas (domenas)</h2>' +
@@ -552,7 +568,11 @@
           name: document.getElementById('s-name').value.trim() || 'Remaster.lt',
           email: document.getElementById('s-email').value.trim(),
           phone: document.getElementById('s-phone').value.trim(),
+          whatsapp: document.getElementById('s-wa').value.trim(),
+          messenger: document.getElementById('s-ms').value.trim(),
           city: document.getElementById('s-city').value.trim(),
+          address: document.getElementById('s-addr').value.trim(),
+          hours: document.getElementById('s-hours').value.trim(),
           url: newDomain ? 'https://' + newDomain : '',
           forma_url: document.getElementById('s-forma').value.trim()
         };
