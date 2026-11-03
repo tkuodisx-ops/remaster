@@ -518,7 +518,7 @@
   }
   function settingsView() {
     loading(viewEl);
-    var def = { email: 'info@remaster.lt', phone: '', city: 'Vilnius, Lietuva', url: '', forma_url: '' };
+    var def = { name: 'Remaster.lt', email: 'info@remaster.lt', phone: '', city: 'Vilnius, Lietuva', url: '', forma_url: '' };
     Promise.all([
       loadJson('duomenys/nustatymai.json', def),
       api('GET', '/pages').catch(function () { return undefined; })   // undefined = nėra teisės skaityti
@@ -531,6 +531,7 @@
       viewEl.innerHTML =
         '<h1 class="title">Nustatymai</h1><div class="sub">Kontaktai ir svetainės adresas.</div>' +
         '<div class="card">' +
+        '<div class="f"><label>Svetainės pavadinimas</label><input type="text" id="s-name" value="' + esc(s.name) + '" placeholder="Remaster.lt"><small>Rodomas logotipe, antraštėje, apačioje ir kontaktuose. Pvz. Remaster.lt, Remasteris ar bet kuris kitas. Dalis po paskutinio taško logotipe paryškinama mėlyna.</small></div>' +
         '<div class="f"><label>El. paštas</label><input type="text" id="s-email" value="' + esc(s.email) + '"></div>' +
         '<div class="f"><label>Telefonas</label><input type="text" id="s-phone" value="' + esc(s.phone) + '" placeholder="+370 600 00000"><small>Palikite tuščią, jei nenorite rodyti telefono.</small></div>' +
         '<div class="f"><label>Vieta</label><input type="text" id="s-city" value="' + esc(s.city) + '"></div>' +
@@ -548,6 +549,7 @@
         var newDomain = normDomain(document.getElementById('s-domain').value);
         if (newDomain && !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(newDomain)) return toast('Netinkamas domenas. Pvz.: remaster.lt', 'err');
         var out = {
+          name: document.getElementById('s-name').value.trim() || 'Remaster.lt',
           email: document.getElementById('s-email').value.trim(),
           phone: document.getElementById('s-phone').value.trim(),
           city: document.getElementById('s-city').value.trim(),
@@ -640,6 +642,12 @@
     if (!token) return renderLogin();
     renderShell();
     route();
+    loadJson('duomenys/nustatymai.json', {}).then(function (st) {
+      if (st && st.name) {
+        document.querySelectorAll('.brand b').forEach(function (b) { b.textContent = String(st.name).toUpperCase(); });
+        document.title = st.name + ' – Valdymas';
+      }
+    }).catch(function () { });
   }
   window.addEventListener('hashchange', route);
   start();

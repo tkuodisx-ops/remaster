@@ -174,6 +174,15 @@ def parse_md(path):
 
 
 # ---------------- Šablonai ----------------
+def brand_html():
+    """Logotipo tekstas: DIDŽIOSIOS raidės, dalis po paskutinio taško paryškinta mėlyna."""
+    n = (SITE["name"] or "Remaster.lt").strip().upper()
+    if "." in n:
+        i = n.rfind(".")
+        return "%s<b>%s</b>" % (html.escape(n[:i]), html.escape(n[i:]))
+    return html.escape(n)
+
+
 def layout(title, desc, content, depth, active=""):
     p = "../" * depth
     home = p + "index.html"
@@ -212,7 +221,7 @@ def layout(title, desc, content, depth, active=""):
 <body>
 <nav class="nav">
   <div class="wrap nav-inner">
-    <a class="logo" href="{home}"><span class="logo-ico"><i class="fa-solid fa-microchip"></i></span><span>REMASTER<b>.LT</b></span></a>
+    <a class="logo" href="{home}"><span class="logo-ico"><i class="fa-solid fa-microchip"></i></span><span>{brand}</span></a>
     <div class="menu" id="menu">
       {menu}
     </div>
@@ -228,7 +237,7 @@ def layout(title, desc, content, depth, active=""):
 </body>
 </html>""".format(
         title=html.escape(full_title), desc=html.escape(desc), p=p, home=home, content=content,
-        menu=menu, foot_links=foot_links, year=datetime.date.today().year, name=SITE["name"])
+        menu=menu, foot_links=foot_links, year=datetime.date.today().year, name=html.escape(SITE["name"]), brand=brand_html())
 
 
 def art_card(a, prefix):
@@ -304,7 +313,7 @@ def index_page(articles, services):
     </div>
   </div>
   <div class="panel">
-    <h3><i class="fa-solid fa-circle-check"></i> Kodėl renkasi Remaster.lt?</h3>
+    <h3><i class="fa-solid fa-circle-check"></i> Kodėl renkasi {name}?</h3>
     <ul class="checks">
       <li><i class="fa-solid fa-check"></i><span><strong>Greita diagnostika:</strong> problemas nustatome per trumpiausią laiką.</span></li>
       <li><i class="fa-solid fa-check"></i><span><strong>Duomenų saugumas:</strong> garantuojame pilną asmeninių failų konfidencialumą.</span></li>
@@ -356,7 +365,7 @@ def index_page(articles, services):
            note=("Atsakysime kuo greičiau." if SITE["forma_url"] else "Paspaudus atsidarys jūsų el. pašto programa su paruoštu laišku."),
            services=services_block(services), prices=prices_html,
            buy_cls=buy_cls, art_cls=art_cls, cont_cls=cont_cls)
-    return layout("Remaster.lt – Kompiuterių remontas, diagnostika ir supirkimas Vilniuje",
+    return layout("%s – Kompiuterių remontas, diagnostika ir supirkimas Vilniuje" % SITE["name"],
                   "Profesionalios kompiuterių remonto paslaugos: OS perrašymas, diagnostika, profilaktika ir termo pastos keitimas, kompiuterių supirkimas Vilniuje.",
                   content, 0)
 
