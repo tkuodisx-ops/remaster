@@ -3,6 +3,8 @@ pavadinimas: Kaip suprasti, kad kompiuteriui reikia profilaktikos
 data: 2026-11-03
 aprasymas: Penki aiškūs ženklai, kad laikas valyti dulkes ir keisti termo pastą.
 nuotrauka: 
+kategorija: Patarimai
+juodrastis: ne
 ---
 
 Kompiuteriai retai sugenda staiga – dažniausiai prieš tai duoda aiškių ženklų. Štai kuo verta susirūpinti.

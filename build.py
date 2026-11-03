@@ -6,11 +6,16 @@ Remaster.lt svetainės generatorius.
   python build.py          -> sugeneruoja svetainę į aplanką "svetaine"
   python build.py --new    -> sukuria naują straipsnio failą (klausia pavadinimo)
 
-Straipsniai: aplankas "straipsniai" (.md failai), nuotraukos: aplankas "nuotraukos".
+Turinys:
+  straipsniai/*.md      straipsniai (valdomi per /admin/)
+  puslapiai/*.md        papildomi puslapiai (Apie mus, D.U.K. ...)
+  duomenys/*.json       nustatymai, paslaugos, kainos (valdomi per /admin/)
+  nuotraukos/           paveikslėliai
 Nereikia jokių papildomų bibliotekų.
 """
 import datetime
 import html
+import json
 import pathlib
 import re
 import shutil
@@ -18,18 +23,28 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent
 SRC = ROOT / "straipsniai"
+PAGES = ROOT / "puslapiai"
+DATA = ROOT / "duomenys"
 IMG = ROOT / "nuotraukos"
 OUT = ROOT / "svetaine"
 
-# ---------------- NUSTATYMAI (keisk čia) ----------------
+# Numatytieji nustatymai (perrašomi iš duomenys/nustatymai.json, t. y. per /admin/)
 SITE = {
     "name": "Remaster.lt",
     "email": "info@remaster.lt",
-    "phone": "",          # kol kas tuščia – telefonas nerodomas. Vėliau įrašyk pvz. "+370 600 00000"
+    "phone": "",
     "city": "Vilnius, Lietuva",
-    "url": "",            # kai turėsi adresą, įrašyk pvz. "https://remaster.lt" (reikalinga sitemap.xml)
+    "url": "",
 }
-# --------------------------------------------------------
+
+DEFAULT_SERVICES = [
+    {"ikona": "desktop", "pavadinimas": "OS perrašymas ir optimizavimas",
+     "aprasymas": "Švari Windows/Linux instaliacija, tvarkyklių (drivers) diegimas, svarbiausių programų paruošimas darbui."},
+    {"ikona": "temperature-arrow-down", "pavadinimas": "Profilaktika ir termo pasta",
+     "aprasymas": "Dulkių valymas, aušinimo sistemos priežiūra ir aukštos kokybės termo pastos keitimas, kad kompiuteris nekaistų."},
+    {"ikona": "stethoscope", "pavadinimas": "Kompiuterių diagnostika",
+     "aprasymas": "Aparatūros ir programinės įrangos gedimų nustatymas, komponentų būklės įvertinimas."},
+]
 
 MONTHS = ["sausio", "vasario", "kovo", "balandžio", "gegužės", "birželio",
           "liepos", "rugpjūčio", "rugsėjo", "spalio", "lapkričio", "gruodžio"]
@@ -38,6 +53,8 @@ LT_MAP = str.maketrans({
     "ą": "a", "č": "c", "ę": "e", "ė": "e", "į": "i", "š": "s", "ų": "u", "ū": "u", "ž": "z",
     "Ą": "a", "Č": "c", "Ę": "e", "Ė": "e", "Į": "i", "Š": "s", "Ų": "u", "Ū": "u", "Ž": "z",
 })
+
+CTX = {"prices": [], "pages": []}   # užpildoma build() metu
 
 
 def slugify(text):
@@ -52,6 +69,16 @@ def fmt_date(d):
         return "%d m. %s %d d." % (y, MONTHS[m - 1], day)
     except Exception:
         return d
+
+
+def load_json(name, default):
+    path = DATA / name
+    if path.exists():
+        try:
+            return json.loads(path.read_text(encoding="utf-8-sig"))
+        except Exception as e:
+            print("Įspėjimas: nepavyko perskaityti %s (%s)" % (name, e))
+    return default
 
 
 # ---------------- Markdown (paprastas) ----------------
@@ -122,7 +149,7 @@ def markdown(text, prefix):
     return "\n".join(out)
 
 
-def parse_article(path):
+def parse_md(path):
     text = path.read_text(encoding="utf-8-sig")
     meta, body = {}, text
     m = re.match(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", text, re.S)
@@ -135,8 +162,9 @@ def parse_article(path):
     meta.setdefault("pavadinimas", path.stem.replace("-", " ").capitalize())
     meta.setdefault("data", datetime.date.fromtimestamp(path.stat().st_mtime).isoformat())
     meta.setdefault("aprasymas", "")
-    meta.setdefault("nuotrauka", "")
-    meta["nuotrauka"] = meta["nuotrauka"].replace("\\", "/").split("nuotraukos/")[-1].strip()
+    meta.setdefault("kategorija", "")
+    meta["nuotrauka"] = meta.get("nuotrauka", "").replace("\\", "/").split("nuotraukos/")[-1].strip()
+    meta["juodrastis"] = meta.get("juodrastis", "").strip().lower() in ("taip", "true", "1", "yes")
     meta["slug"] = slugify(path.stem)
     meta["body"] = body
     return meta
@@ -151,8 +179,18 @@ def layout(title, desc, content, depth, active=""):
         cls = ' class="active"' if active == key else ""
         return '<a href="%s"%s>%s</a>' % (href, cls, label)
 
+    menu = a(home + "#paslaugos", "Paslaugos", "paslaugos")
+    if CTX["prices"]:
+        menu += a(home + "#kainos", "Kainos", "kainos")
+    menu += a(home + "#supirkimas", "Supirkimas", "supirkimas")
+    menu += a(p + "straipsniai/index.html", "Straipsniai", "straipsniai")
+    menu += a(home + "#kontaktai", "Kontaktai", "kontaktai")
+
+    foot_links = "".join('<a href="%spuslapiai/%s.html">%s</a>' % (p, pg["slug"], html.escape(pg["pavadinimas"]))
+                         for pg in CTX["pages"])
+    foot_links = ('<div class="foot-links">%s</div>' % foot_links) if foot_links else ""
+
     full_title = title if title.startswith(SITE["name"]) else "%s | %s" % (title, SITE["name"])
-    canonical = ""
     return """<!DOCTYPE html>
 <html lang="lt">
 <head>
@@ -173,7 +211,7 @@ def layout(title, desc, content, depth, active=""):
   <div class="wrap nav-inner">
     <a class="logo" href="{home}"><span class="logo-ico"><i class="fa-solid fa-microchip"></i></span><span>REMASTER<b>.LT</b></span></a>
     <div class="menu" id="menu">
-      {m1}{m2}{m3}{m4}
+      {menu}
     </div>
     <a class="btn btn-primary nav-cta" href="{home}#kontaktai"><i class="fa-solid fa-headset"></i> Konsultacija</a>
     <button class="burger" id="burger" aria-label="Meniu"><i class="fa-solid fa-bars"></i></button>
@@ -182,25 +220,23 @@ def layout(title, desc, content, depth, active=""):
 <main>
 {content}
 </main>
-<footer><div class="wrap">&copy; {year} {name} – Visos teisės saugomos.</div></footer>
+<footer><div class="wrap">{foot_links}&copy; {year} {name} – Visos teisės saugomos.</div></footer>
 <script src="{p}script.js"></script>
 </body>
 </html>""".format(
         title=html.escape(full_title), desc=html.escape(desc), p=p, home=home, content=content,
-        m1=a(home + "#paslaugos", "Paslaugos", "paslaugos"),
-        m2=a(home + "#supirkimas", "Supirkimas", "supirkimas"),
-        m3=a(p + "straipsniai/index.html", "Straipsniai", "straipsniai"),
-        m4=a(home + "#kontaktai", "Kontaktai", "kontaktai"),
-        year=datetime.date.today().year, name=SITE["name"])
+        menu=menu, foot_links=foot_links, year=datetime.date.today().year, name=SITE["name"])
 
 
 def art_card(a, prefix):
     cover = ('<img src="%snuotraukos/%s" alt="" loading="lazy">' % (prefix, a["nuotrauka"])
              if a["nuotrauka"] else '<i class="fa-solid fa-screwdriver-wrench"></i>')
-    return """<a class="art-card" href="{p}straipsniai/{slug}.html">
+    cat = '<span class="tag">%s</span>' % html.escape(a["kategorija"]) if a["kategorija"] else ""
+    return """<a class="art-card" href="{p}straipsniai/{slug}.html" data-cat="{catraw}">
   <div class="cover">{cover}</div>
-  <div class="art-body"><time>{date}</time><h3>{title}</h3><p>{desc}</p></div>
-</a>""".format(p=prefix, slug=a["slug"], cover=cover, date=fmt_date(a["data"]),
+  <div class="art-body"><div class="meta"><time>{date}</time>{cat}</div><h3>{title}</h3><p>{desc}</p></div>
+</a>""".format(p=prefix, slug=a["slug"], cover=cover, date=fmt_date(a["data"]), cat=cat,
+               catraw=html.escape(a["kategorija"]),
                title=html.escape(a["pavadinimas"]), desc=html.escape(a["aprasymas"]))
 
 
@@ -213,15 +249,44 @@ def contact_block():
   <a class="contact" href="mailto:{email}"><i class="fa-solid fa-envelope"></i><span>{email}</span></a>
   {phone}
   <div class="contact"><i class="fa-solid fa-location-dot"></i><span>{city}</span></div>
-</div>""".format(email=SITE["email"], phone=phone, city=SITE["city"])
+</div>""".format(email=html.escape(SITE["email"]), phone=phone, city=html.escape(SITE["city"]))
 
 
-def index_page(articles):
+def services_block(services):
+    cards = []
+    for s in services:
+        icon = re.sub(r"[^a-z0-9-]", "", str(s.get("ikona", "screwdriver-wrench")).lower()) or "screwdriver-wrench"
+        cards.append('<div class="card"><div class="ico"><i class="fa-solid fa-%s"></i></div><h3>%s</h3><p>%s</p></div>' % (
+            icon, html.escape(s.get("pavadinimas", "")), html.escape(s.get("aprasymas", ""))))
+    return "".join(cards)
+
+
+def prices_section(prices):
+    if not prices:
+        return ""
+    rows = []
+    for r in prices:
+        note = '<span class="pnote">%s</span>' % html.escape(r.get("pastaba", "")) if r.get("pastaba") else ""
+        rows.append('<div class="price-row"><div class="pname">%s%s</div><div class="pval">%s</div></div>' % (
+            html.escape(r.get("pavadinimas", "")), note, html.escape(r.get("kaina", ""))))
+    return """<section class="s alt" id="kainos"><div class="wrap">
+  <div class="s-head"><span class="eyebrow">Skaidrios kainos</span><h2>Paslaugų kainos</h2><p>Galutinę kainą nustatome po diagnostikos, o apie ją pasakome iš anksto.</p></div>
+  <div class="price-list">%s</div>
+</div></section>""" % "".join(rows)
+
+
+def index_page(articles, services):
     latest = articles[:3]
     if latest:
         grid = '<div class="art-grid">%s</div><div class="more"><a class="btn btn-ghost" href="straipsniai/index.html">Visi straipsniai <i class="fa-solid fa-arrow-right"></i></a></div>' % "".join(art_card(a, "") for a in latest)
     else:
         grid = '<p class="empty">Straipsniai netrukus.</p>'
+
+    prices_html = prices_section(CTX["prices"])
+    # kainų sekcija keičia fono pasikaitaliojimą – supirkimas visada „alt" jei kainų nėra, kitaip paprastas
+    buy_cls = "s" if CTX["prices"] else "s alt"
+    art_cls = "s alt" if CTX["prices"] else "s"
+    cont_cls = "s" if CTX["prices"] else "s alt"
 
     content = """
 <section class="hero"><div class="wrap hero-grid">
@@ -246,14 +311,12 @@ def index_page(articles):
 
 <section class="s" id="paslaugos"><div class="wrap">
   <div class="s-head"><h2>Mūsų paslaugos</h2><p>Profesionali pagalba jūsų staliniams ir nešiojamiesiems kompiuteriams.</p></div>
-  <div class="grid3">
-    <div class="card"><div class="ico"><i class="fa-solid fa-desktop"></i></div><h3>OS perrašymas ir optimizavimas</h3><p>Švari Windows/Linux instaliacija, tvarkyklių (drivers) diegimas, svarbiausių programų paruošimas darbui.</p></div>
-    <div class="card"><div class="ico"><i class="fa-solid fa-temperature-arrow-down"></i></div><h3>Profilaktika ir termo pasta</h3><p>Dulkių valymas, aušinimo sistemos priežiūra ir aukštos kokybės termo pastos keitimas, kad kompiuteris nekaistų.</p></div>
-    <div class="card"><div class="ico"><i class="fa-solid fa-stethoscope"></i></div><h3>Kompiuterių diagnostika</h3><p>Aparatūros ir programinės įrangos gedimų nustatymas, komponentų būklės įvertinimas.</p></div>
-  </div>
+  <div class="grid3">{services}</div>
 </div></section>
 
-<section class="s alt" id="supirkimas"><div class="wrap two">
+{prices}
+
+<section class="{buy_cls}" id="supirkimas"><div class="wrap two">
   <div>
     <span class="eyebrow">Greitas atsiskaitymas</span>
     <h2>Kompiuterių ir komponentų supirkimas</h2>
@@ -274,62 +337,98 @@ def index_page(articles):
   </form>
 </div></section>
 
-<section class="s" id="straipsniai"><div class="wrap">
+<section class="{art_cls}" id="straipsniai"><div class="wrap">
   <div class="s-head"><span class="eyebrow">Naudinga žinoti</span><h2>Patarimai ir straipsniai</h2><p>Praktiniai patarimai apie kompiuterių priežiūrą, temperatūras ir greitį.</p></div>
   {grid}
 </div></section>
 
-<section class="s alt" id="kontaktai"><div class="wrap">
+<section class="{cont_cls}" id="kontaktai"><div class="wrap">
   <div class="s-head"><h2>Susisiekite su {name}</h2></div>
   {contacts}
 </div></section>
-""".format(email=SITE["email"], grid=grid, name=SITE["name"], contacts=contact_block())
+""".format(email=html.escape(SITE["email"]), grid=grid, name=SITE["name"], contacts=contact_block(),
+           services=services_block(services), prices=prices_html,
+           buy_cls=buy_cls, art_cls=art_cls, cont_cls=cont_cls)
     return layout("Remaster.lt – Kompiuterių remontas, diagnostika ir supirkimas Vilniuje",
                   "Profesionalios kompiuterių remonto paslaugos: OS perrašymas, diagnostika, profilaktika ir termo pastos keitimas, kompiuterių supirkimas Vilniuje.",
                   content, 0)
 
 
 def list_page(articles):
-    grid = ('<div class="art-grid">%s</div>' % "".join(art_card(a, "../") for a in articles)
+    cats = []
+    for a in articles:
+        if a["kategorija"] and a["kategorija"] not in cats:
+            cats.append(a["kategorija"])
+    chips = ""
+    if len(cats) > 0:
+        chips = '<div class="chips" id="chips"><button class="chip on" data-cat="">Visi</button>%s</div>' % "".join(
+            '<button class="chip" data-cat="%s">%s</button>' % (html.escape(c), html.escape(c)) for c in cats)
+    grid = ('<div class="art-grid" id="art-grid">%s</div>' % "".join(art_card(a, "../") for a in articles)
             if articles else '<p class="empty">Straipsnių kol kas nėra.</p>')
     content = """<div class="wrap"><div class="page-head">
 <div class="crumbs"><a href="../index.html">Pradžia</a> / Straipsniai</div>
 <h1>Patarimai ir straipsniai</h1></div>
-<div style="padding-bottom:70px">%s</div></div>""" % grid
+%s
+<div style="padding-bottom:70px">%s</div></div>""" % (chips, grid)
     return layout("Straipsniai", "Naudingi patarimai apie kompiuterių priežiūrą, remontą ir optimizavimą.", content, 1, "straipsniai")
 
 
 def article_page(a):
     hero = ('<img class="hero-img" src="../nuotraukos/%s" alt="">' % a["nuotrauka"]) if a["nuotrauka"] else ""
+    cat = ' <span class="tag">%s</span>' % html.escape(a["kategorija"]) if a["kategorija"] else ""
     content = """<div class="wrap"><div class="page-head" style="max-width:760px;margin:0 auto;padding-left:0;padding-right:0">
 <div class="crumbs"><a href="../index.html">Pradžia</a> / <a href="index.html">Straipsniai</a></div>
-<h1>{title}</h1><div class="crumbs"><i class="fa-regular fa-calendar"></i> {date}</div></div></div>
+<h1>{title}</h1><div class="crumbs"><i class="fa-regular fa-calendar"></i> {date}{cat}</div></div></div>
 <article class="article">
 {hero}
 <div class="prose">{body}</div>
 <div class="cta"><h3>Reikia pagalbos su kompiuteriu?</h3><p>Parašykite – įvertinsime problemą ir pasiūlysime sprendimą.</p>
 <a class="btn btn-ghost" href="../index.html#kontaktai">Susisiekti</a></div>
-</article>""".format(title=html.escape(a["pavadinimas"]), date=fmt_date(a["data"]), hero=hero,
+</article>""".format(title=html.escape(a["pavadinimas"]), date=fmt_date(a["data"]), hero=hero, cat=cat,
                      body=markdown(a["body"], "../"))
     return layout(a["pavadinimas"], a["aprasymas"], content, 1, "straipsniai")
 
 
+def static_page(pg):
+    hero = ('<img class="hero-img" src="../nuotraukos/%s" alt="">' % pg["nuotrauka"]) if pg["nuotrauka"] else ""
+    content = """<div class="wrap"><div class="page-head" style="max-width:760px;margin:0 auto;padding-left:0;padding-right:0">
+<div class="crumbs"><a href="../index.html">Pradžia</a> / {title}</div>
+<h1>{title}</h1></div></div>
+<article class="article">
+{hero}
+<div class="prose">{body}</div>
+<div class="cta"><h3>Turite klausimų?</h3><p>Parašykite – mielai padėsime.</p>
+<a class="btn btn-ghost" href="../index.html#kontaktai">Susisiekti</a></div>
+</article>""".format(title=html.escape(pg["pavadinimas"]), hero=hero, body=markdown(pg["body"], "../"))
+    return layout(pg["pavadinimas"], pg["aprasymas"], content, 1)
+
+
 # ---------------- Generavimas ----------------
 def build():
-    SRC.mkdir(exist_ok=True)
-    IMG.mkdir(exist_ok=True)
+    for d in (SRC, PAGES, DATA, IMG):
+        d.mkdir(exist_ok=True)
+
+    SITE.update({k: v for k, v in load_json("nustatymai.json", {}).items() if k in SITE and isinstance(v, str)})
+    services = load_json("paslaugos.json", DEFAULT_SERVICES) or DEFAULT_SERVICES
+    CTX["prices"] = [r for r in load_json("kainos.json", []) if r.get("pavadinimas")]
+
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir()
     (OUT / "straipsniai").mkdir()
+    (OUT / "puslapiai").mkdir()
 
-    articles = [parse_article(p) for p in sorted(SRC.glob("*.md"))]
+    articles = [a for a in (parse_md(p) for p in sorted(SRC.glob("*.md"))) if not a["juodrastis"]]
     articles.sort(key=lambda a: a["data"], reverse=True)
+    pages = [pg for pg in (parse_md(p) for p in sorted(PAGES.glob("*.md"))) if not pg["juodrastis"]]
+    CTX["pages"] = pages
 
-    (OUT / "index.html").write_text(index_page(articles), encoding="utf-8")
+    (OUT / "index.html").write_text(index_page(articles, services), encoding="utf-8")
     (OUT / "straipsniai" / "index.html").write_text(list_page(articles), encoding="utf-8")
     for a in articles:
         (OUT / "straipsniai" / (a["slug"] + ".html")).write_text(article_page(a), encoding="utf-8")
+    for pg in pages:
+        (OUT / "puslapiai" / (pg["slug"] + ".html")).write_text(static_page(pg), encoding="utf-8")
 
     for f in ("stilius.css", "script.js"):
         shutil.copy(ROOT / f, OUT / f)
@@ -337,20 +436,21 @@ def build():
     if (ROOT / "admin").exists():
         shutil.copytree(ROOT / "admin", OUT / "admin")
 
-    # 404 ir robots
     (OUT / "404.html").write_text(layout("Puslapis nerastas", "Puslapis nerastas",
         '<div class="wrap" style="padding:90px 0;text-align:center"><h1>Puslapis nerastas</h1><p style="margin:16px 0 24px;color:#94a3b8">Tokio adreso nėra.</p><a class="btn btn-primary" href="index.html">Į pradžią</a></div>', 0), encoding="utf-8")
     robots = "User-agent: *\nAllow: /\nDisallow: /admin/\n"
     if SITE["url"]:
         base = SITE["url"].rstrip("/")
-        urls = [base + "/", base + "/straipsniai/index.html"] + ["%s/straipsniai/%s.html" % (base, a["slug"]) for a in articles]
+        urls = [base + "/", base + "/straipsniai/index.html"] + \
+               ["%s/straipsniai/%s.html" % (base, a["slug"]) for a in articles] + \
+               ["%s/puslapiai/%s.html" % (base, pg["slug"]) for pg in pages]
         sm = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n%s\n</urlset>\n' % \
              "\n".join("<url><loc>%s</loc></url>" % u for u in urls)
         (OUT / "sitemap.xml").write_text(sm, encoding="utf-8")
         robots += "Sitemap: %s/sitemap.xml\n" % base
     (OUT / "robots.txt").write_text(robots, encoding="utf-8")
 
-    print("Sugeneruota. Straipsnių: %d" % len(articles))
+    print("Sugeneruota. Straipsnių: %d, puslapių: %d" % (len(articles), len(pages)))
     print("Rezultatas aplanke: %s" % OUT)
 
 
@@ -362,7 +462,7 @@ def new_article():
     today = datetime.date.today().isoformat()
     path = SRC / ("%s-%s.md" % (today, slugify(title)))
     path.write_text(
-        "---\npavadinimas: %s\ndata: %s\naprasymas: Trumpas aprašymas (rodomas sąraše ir Google paieškoje)\nnuotrauka: \n---\n\n"
+        "---\npavadinimas: %s\ndata: %s\nkategorija: Patarimai\naprasymas: Trumpas aprašymas (rodomas sąraše ir Google paieškoje)\nnuotrauka: \njuodrastis: ne\n---\n\n"
         "Pirmas pastraipos tekstas.\n\n## Poskyrio antraštė\n\nTekstas su **paryškinimu**.\n\n- sąrašo punktas\n- kitas punktas\n\n"
         "![Nuotraukos aprašymas](nuotrauka.jpg)\n" % (title, today), encoding="utf-8")
     print("Sukurta: %s" % path)

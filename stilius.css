@@ -120,3 +120,20 @@ footer{background:#020617;border-top:1px solid #0f172a;padding:24px 0;text-align
   .nav-cta{display:none}
 }
 @media(min-width:861px) and (max-width:1020px){.grid3,.art-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* kategorijos, kainos, filtrai, footer nuorodos */
+.meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tag{display:inline-block;background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.3);padding:1px 10px;border-radius:99px;font-size:.74rem;font-weight:600}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 28px}
+.chip{background:var(--bg2);border:1px solid var(--line);color:var(--text);padding:8px 16px;border-radius:99px;font:inherit;font-size:.9rem;font-weight:600;cursor:pointer;transition:.2s}
+.chip:hover{border-color:var(--blue2)}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.art-card.hide{display:none}
+.price-list{max-width:760px;margin:0 auto;background:rgba(30,41,59,.5);border:1px solid rgba(51,65,85,.6);border-radius:14px;overflow:hidden}
+.price-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid rgba(51,65,85,.6)}
+.price-row:last-child{border-bottom:0}
+.pname{font-weight:600;color:#fff;display:flex;flex-direction:column}
+.pnote{font-weight:400;font-size:.82rem;color:var(--muted)}
+.pval{font-weight:800;color:var(--blue3);white-space:nowrap}
+.foot-links{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+.foot-links a:hover{color:var(--blue3)}

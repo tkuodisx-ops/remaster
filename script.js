@@ -24,3 +24,19 @@
     });
   }
 })();
+
+// Straipsnių filtravimas pagal kategoriją
+(function () {
+  var chips = document.getElementById('chips');
+  var grid = document.getElementById('art-grid');
+  if (!chips || !grid) return;
+  chips.addEventListener('click', function (e) {
+    var b = e.target.closest('.chip');
+    if (!b) return;
+    var cat = b.getAttribute('data-cat');
+    chips.querySelectorAll('.chip').forEach(function (c) { c.classList.toggle('on', c === b); });
+    grid.querySelectorAll('.art-card').forEach(function (card) {
+      card.classList.toggle('hide', !!cat && card.getAttribute('data-cat') !== cat);
+    });
+  });
+})();

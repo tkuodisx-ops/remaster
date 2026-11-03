@@ -1,0 +1,5 @@
+[
+  {"ikona": "desktop", "pavadinimas": "OS perrašymas ir optimizavimas", "aprasymas": "Švari Windows/Linux instaliacija, tvarkyklių (drivers) diegimas, svarbiausių programų paruošimas darbui."},
+  {"ikona": "temperature-arrow-down", "pavadinimas": "Profilaktika ir termo pasta", "aprasymas": "Dulkių valymas, aušinimo sistemos priežiūra ir aukštos kokybės termo pastos keitimas, kad kompiuteris nekaistų."},
+  {"ikona": "stethoscope", "pavadinimas": "Kompiuterių diagnostika", "aprasymas": "Aparatūros ir programinės įrangos gedimų nustatymas, komponentų būklės įvertinimas."}
+]

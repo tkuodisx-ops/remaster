@@ -3,6 +3,8 @@ pavadinimas: Kada verta perrašyti Windows
 data: 2026-11-02
 aprasymas: Kada pakanka paprasto sutvarkymo, o kada švari Windows instaliacija yra geriausias sprendimas.
 nuotrauka: 
+kategorija: Patarimai
+juodrastis: ne
 ---
 
 Windows perrašymas skamba drastiškai, bet kartais tai **greičiausias ir patikimiausias** sprendimas.
