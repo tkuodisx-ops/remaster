@@ -183,3 +183,20 @@ footer{background:#020617;border-top:1px solid #0f172a;padding:24px 0;text-align
 .price-how b{color:#fff}
 .price-how span{color:var(--muted);font-size:.9rem}
 .price-list+.more{text-align:center;margin-top:24px}
+
+/* kainų lentelė */
+.price-table-wrap{margin:16px 0 40px;border:1px solid rgba(51,65,85,.7);border-radius:16px;overflow:hidden;background:rgba(30,41,59,.45)}
+.price-table{width:100%;border-collapse:collapse}
+.price-table th{text-align:left;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:14px 24px;background:rgba(15,23,42,.7);border-bottom:1px solid rgba(51,65,85,.7)}
+.price-table th:last-child,.price-table td.tprice{text-align:right}
+.price-table td{padding:18px 24px;border-bottom:1px solid rgba(51,65,85,.5);vertical-align:middle}
+.price-table tr:last-child td{border-bottom:0}
+.price-table tbody tr:hover{background:rgba(37,99,235,.08)}
+.tname{display:flex;align-items:center;gap:16px}
+.tname>i{width:38px;height:38px;flex:none;border-radius:10px;background:rgba(37,99,235,.2);color:var(--blue3);display:flex;align-items:center;justify-content:center;font-size:1rem}
+.tname span{display:flex;flex-direction:column;gap:2px}
+.tname b{color:#fff;font-weight:600}
+.tnote{color:var(--muted);font-size:.85rem}
+.tprice{font-weight:800;font-size:1.15rem;color:#fb923c;white-space:nowrap}
+.tprice.free{color:#4ade80}
+@media(max-width:560px){.price-table th,.price-table td{padding:14px 14px}.tname{gap:12px}.tname>i{display:none}.tprice{font-size:1.02rem}}

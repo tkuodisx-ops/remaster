@@ -380,14 +380,16 @@ def prices_section(prices, cls="s alt"):
 
 
 def prices_page(prices):
-    cards = []
+    rows = []
     for r in prices:
         free = r.get("kaina", "").strip().lower().startswith("nemokam")
-        note = '<p>%s</p>' % html.escape(r.get("pastaba", "")) if r.get("pastaba") else ""
-        cards.append('<div class="pcard%s"><div class="pico"><i class="fa-solid fa-%s"></i></div>'
-                     '<h3>%s</h3><div class="pprice">%s</div>%s</div>' % (
-                         " free" if free else "", price_icon(r), html.escape(r.get("pavadinimas", "")),
-                         html.escape(r.get("kaina", "")), note))
+        note = '<span class="tnote">%s</span>' % html.escape(r.get("pastaba", "")) if r.get("pastaba") else ""
+        rows.append('<tr><td class="tname"><i class="fa-solid fa-%s"></i><span><b>%s</b>%s</span></td>'
+                    '<td class="tprice%s">%s</td></tr>' % (
+                        price_icon(r), html.escape(r.get("pavadinimas", "")), note,
+                        " free" if free else "", html.escape(r.get("kaina", ""))))
+    table = ('<div class="price-table-wrap"><table class="price-table"><thead><tr><th>Paslauga</th>'
+             '<th>Kaina</th></tr></thead><tbody>%s</tbody></table></div>' % "".join(rows))
     phone = ""
     if SITE["phone"]:
         tel = re.sub(r"[^\d+]", "", SITE["phone"])
@@ -397,12 +399,12 @@ def prices_page(prices):
 <span class="eyebrow">Skaidrios kainos</span>
 <h1>Paslaugų kainos</h1>
 <p class="lead-p">Galutinę kainą nustatome po diagnostikos ir pasakome iš anksto. Diagnostika nemokama.</p></div>
-<div class="price-grid">%s</div>
+%s
 <div class="price-how"><div><i class="fa-solid fa-stethoscope"></i><b>1. Diagnostika</b><span>Patikriname įrenginį ir nustatome gedimą.</span></div>
 <div><i class="fa-solid fa-tag"></i><b>2. Kaina</b><span>Pasakome, kiek kainuos darbas, prieš pradėdami.</span></div>
 <div><i class="fa-solid fa-screwdriver-wrench"></i><b>3. Remontas</b><span>Taisome tik tai, ką sutarėme.</span></div></div>
 <div class="cta" style="margin-bottom:70px"><h3>Neradote savo paslaugos?</h3><p>Parašykite ar paskambinkite, pasakysime kainą.</p>
-<a class="btn btn-primary" href="index.html#kontaktai">Susisiekti</a>%s</div></div>""" % ("".join(cards), phone)
+<a class="btn btn-primary" href="index.html#kontaktai">Susisiekti</a>%s</div></div>""" % (table, phone)
     return layout("Kainos", "Kompiuterių remonto, profilaktikos ir OS perrašymo kainos Vilniuje. Diagnostika nemokama.",
                   content, 0, "kainos", path="kainos.html")
 
