@@ -240,7 +240,7 @@ def layout(title, desc, content, depth, active="", path=None, head_extra=""):
 
     menu = a(home + "#paslaugos", "Paslaugos", "paslaugos")
     if CTX["prices"]:
-        menu += a(home + "#kainos", "Kainos", "kainos")
+        menu += a(p + "kainos.html", "Kainos", "kainos")
     menu += a(home + "#supirkimas", "Supirkimas", "supirkimas")
     menu += a(p + "straipsniai/index.html", "Straipsniai", "straipsniai")
     if CTX["faq"]:
@@ -350,18 +350,61 @@ def services_block(services):
     return "".join(cards)
 
 
+def price_icon(r):
+    """Ikona kainų kortelei: pagal paslaugos ikoną arba pagal pavadinimo žodžius."""
+    if r.get("ikona"):
+        return re.sub(r"[^a-z0-9-]", "", str(r["ikona"]).lower()) or "euro-sign"
+    n = r.get("pavadinimas", "").lower()
+    for key, ico in (("ekran", "display"), ("ventiliator", "fan"), ("aušin", "fan"), ("metal", "droplet"),
+                     ("pad", "layer-group"), ("diagnost", "stethoscope"), ("termo", "temperature-arrow-down"),
+                     ("os ", "desktop"), ("perraš", "desktop")):
+        if key in n:
+            return ico
+    return "euro-sign"
+
+
 def prices_section(prices, cls="s alt"):
+    """Titulinio puslapio kainų suvestinė (pirmos eilutės) su nuoroda į visą kainoraštį."""
     if not prices:
         return ""
     rows = []
-    for r in prices:
+    for r in prices[:3]:
         note = '<span class="pnote">%s</span>' % html.escape(r.get("pastaba", "")) if r.get("pastaba") else ""
         rows.append('<div class="price-row"><div class="pname">%s%s</div><div class="pval">%s</div></div>' % (
             html.escape(r.get("pavadinimas", "")), note, html.escape(r.get("kaina", ""))))
     return """<section class="%s" id="kainos"><div class="wrap">
   <div class="s-head"><span class="eyebrow">Skaidrios kainos</span><h2>Paslaugų kainos</h2><p>Galutinę kainą nustatome po diagnostikos, o apie ją pasakome iš anksto.</p></div>
   <div class="price-list">%s</div>
+  <div class="more"><a class="btn btn-ghost" href="kainos.html">Visas kainoraštis <i class="fa-solid fa-arrow-right"></i></a></div>
 </div></section>""" % (cls, "".join(rows))
+
+
+def prices_page(prices):
+    cards = []
+    for r in prices:
+        free = r.get("kaina", "").strip().lower().startswith("nemokam")
+        note = '<p>%s</p>' % html.escape(r.get("pastaba", "")) if r.get("pastaba") else ""
+        cards.append('<div class="pcard%s"><div class="pico"><i class="fa-solid fa-%s"></i></div>'
+                     '<h3>%s</h3><div class="pprice">%s</div>%s</div>' % (
+                         " free" if free else "", price_icon(r), html.escape(r.get("pavadinimas", "")),
+                         html.escape(r.get("kaina", "")), note))
+    phone = ""
+    if SITE["phone"]:
+        tel = re.sub(r"[^\d+]", "", SITE["phone"])
+        phone = ' <a class="btn btn-ghost" href="tel:%s"><i class="fa-solid fa-phone"></i> %s</a>' % (tel, html.escape(SITE["phone"]))
+    content = """<div class="wrap"><div class="page-head">
+<div class="crumbs"><a href="index.html">Pradžia</a> / Kainos</div>
+<span class="eyebrow">Skaidrios kainos</span>
+<h1>Paslaugų kainos</h1>
+<p class="lead-p">Galutinę kainą nustatome po diagnostikos ir pasakome iš anksto. Diagnostika nemokama.</p></div>
+<div class="price-grid">%s</div>
+<div class="price-how"><div><i class="fa-solid fa-stethoscope"></i><b>1. Diagnostika</b><span>Patikriname įrenginį ir nustatome gedimą.</span></div>
+<div><i class="fa-solid fa-tag"></i><b>2. Kaina</b><span>Pasakome, kiek kainuos darbas, prieš pradėdami.</span></div>
+<div><i class="fa-solid fa-screwdriver-wrench"></i><b>3. Remontas</b><span>Taisome tik tai, ką sutarėme.</span></div></div>
+<div class="cta" style="margin-bottom:70px"><h3>Neradote savo paslaugos?</h3><p>Parašykite ar paskambinkite, pasakysime kainą.</p>
+<a class="btn btn-primary" href="index.html#kontaktai">Susisiekti</a>%s</div></div>""" % ("".join(cards), phone)
+    return layout("Kainos", "Kompiuterių remonto, profilaktikos ir OS perrašymo kainos Vilniuje. Diagnostika nemokama.",
+                  content, 0, "kainos", path="kainos.html")
 
 
 def faq_section(cls):
@@ -577,7 +620,7 @@ def build():
     SITE.update({k: v for k, v in load_json("nustatymai.json", {}).items() if k in SITE and isinstance(v, str)})
     services = load_json("paslaugos.json", DEFAULT_SERVICES) or DEFAULT_SERVICES
     # kainų lentelė: paslaugos su kaina + papildomos kainos (be pasikartojimų)
-    from_services = [{"pavadinimas": s.get("pavadinimas", ""), "kaina": s["kaina"], "pastaba": s.get("kainos_pastaba", "")}
+    from_services = [{"pavadinimas": s.get("pavadinimas", ""), "kaina": s["kaina"], "pastaba": s.get("kainos_pastaba", ""), "ikona": s.get("ikona", "")}
                      for s in services if s.get("kaina") and s.get("pavadinimas")]
     extra = [r for r in load_json("kainos.json", []) if r.get("pavadinimas")]
     CTX["prices"] = from_services + extra
@@ -598,6 +641,8 @@ def build():
     (OUT / "straipsniai" / "index.html").write_text(list_page(articles), encoding="utf-8")
     for a in articles:
         (OUT / "straipsniai" / (a["slug"] + ".html")).write_text(article_page(a), encoding="utf-8")
+    if CTX["prices"]:
+        (OUT / "kainos.html").write_text(prices_page(CTX["prices"]), encoding="utf-8")
     for pg in pages:
         (OUT / "puslapiai" / (pg["slug"] + ".html")).write_text(static_page(pg), encoding="utf-8")
 
@@ -622,7 +667,7 @@ def build():
     robots = "User-agent: *\nAllow: /\nDisallow: /admin/\n"
     if SITE["url"]:
         base = SITE["url"].rstrip("/")
-        urls = [base + "/", base + "/straipsniai/index.html"] + \
+        urls = [base + "/", base + "/straipsniai/index.html"] + ([base + "/kainos.html"] if CTX["prices"] else []) + \
                ["%s/straipsniai/%s.html" % (base, a["slug"]) for a in articles] + \
                ["%s/puslapiai/%s.html" % (base, pg["slug"]) for pg in pages]
         sm = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n%s\n</urlset>\n' % \
