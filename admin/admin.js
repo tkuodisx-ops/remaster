@@ -180,7 +180,7 @@
   function renderLogin() {
     appEl.innerHTML =
       '<div class="login"><div class="login-card">' +
-      '<div class="brand"><div class="brand-ico"><i class="fa-solid fa-microchip"></i></div><div><small>Svetainės valdymas</small><b>REMASTER.LT</b></div></div>' +
+      '<div class="brand"><div class="brand-ico" style="background:none">'+LOGO_MARK+'</div><div><small>Svetainės valdymas</small><b>REMASTER.LT</b></div></div>' +
       '<h2>Prisijungimas</h2>' +
       '<p>Įklijuokite GitHub raktą (token) su leidimu <b>Contents: Read and write</b> saugyklai <b>remaster</b>. Raktas saugomas tik šiame naršyklės įrenginyje.</p>' +
       '<div class="f"><input type="text" id="tok" placeholder="github_pat_..." autocomplete="off" autocapitalize="off" spellcheck="false"></div>' +
@@ -222,7 +222,7 @@
     appEl.innerHTML =
       '<div class="shell">' +
       '<aside class="side" id="side">' +
-      '<div class="brand"><div class="brand-ico"><i class="fa-solid fa-microchip"></i></div><div><small>Kompiuterių taisykla</small><b>REMASTER.LT</b></div></div>' +
+      '<div class="brand"><div class="brand-ico" style="background:none">'+LOGO_MARK+'</div><div><small>Kompiuterių taisykla</small><b>REMASTER.LT</b></div></div>' +
       '<nav class="nav">' + nav + '<hr><a href="../index.html" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i><span>Atidaryti svetainę</span></a></nav>' +
       '<div class="side-foot"><div class="avatar">T</div><div class="who"><b>Valdytojas</b><small>Svetainės redaktorius</small></div>' +
       '<button class="icon-btn" id="logout" title="Atsijungti"><i class="fa-solid fa-right-from-bracket"></i></button></div>' + verHtml() +
@@ -528,15 +528,17 @@
       fields: [{ k: 'klausimas', t: 'text', l: 'Klausimas' }, { k: 'atsakymas', t: 'area', l: 'Atsakymas' }]
     });
   }
+  var LOGO_MARK = '<svg width="44" height="44" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="#2563eb"/><path d="M40 28a12 12 0 1 1-4.2-9.1" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/><path d="M33 14.5 43 15.5 38.5 24.5Z" fill="#fb923c"/></svg>';
   function settingsView() {
     loading(viewEl);
-    var def = { name: 'Remaster.lt', email: 'info@remaster.lt', phone: '', whatsapp: '', messenger: '', city: 'Vilnius, Lietuva', address: '', hours: '', url: '', forma_url: '' };
+    var def = { name: 'Remaster.lt', slogan: 'Patikima kompiuterių priežiūra ir supirkimas', email: 'info@remaster.lt', phone: '', whatsapp: '', messenger: '', city: 'Vilnius, Lietuva', address: '', hours: '', url: '', forma_url: '' };
     loadJson('duomenys/nustatymai.json', def).then(function (res) {
       var s = Object.assign({}, def, res);
       viewEl.innerHTML =
         '<h1 class="title">Nustatymai</h1><div class="sub">Kontaktai ir svetainės duomenys.</div>' +
         '<div class="card">' +
-        '<div class="f"><label>Svetainės pavadinimas</label><input type="text" id="s-name" value="' + esc(s.name) + '" placeholder="Remaster.lt"><small>Rodomas logotipe, antraštėje, apačioje ir kontaktuose. Pvz. Remaster.lt, Remasteris ar bet kuris kitas. Dalis po paskutinio taško logotipe paryškinama mėlyna.</small></div>' +
+        '<div class="f"><label>Svetainės pavadinimas</label><input type="text" id="s-name" value="' + esc(s.name) + '" placeholder="Remaster.lt"><small>Rodomas logotipe, antraštėje, apačioje ir kontaktuose. Pvz. Remaster.lt, Remasteris ar bet kuris kitas. Dalis po paskutinio taško logotipe paryškinama oranžine.</small></div>' +
+        '<div class="f"><label>Užrašas po pavadinimu (šūkis)</label><input type="text" id="s-slogan" value="' + esc(s.slogan) + '" placeholder="Patikima kompiuterių priežiūra ir supirkimas"><small>Rodomas po logotipu. Palikite tuščią, jei nenorite rodyti.</small></div>' +
         '<div class="f"><label>El. paštas</label><input type="text" id="s-email" value="' + esc(s.email) + '"></div>' +
         '<div class="f"><label>Telefonas</label><input type="text" id="s-phone" value="' + esc(s.phone) + '" placeholder="+370 600 00000"><small>Palikite tuščią, jei nenorite rodyti telefono.</small></div>' +
         '<div class="f"><label>WhatsApp numeris (nebūtina)</label><input type="text" id="s-wa" value="' + esc(s.whatsapp) + '" placeholder="+370 600 00000"><small>Jei įrašysite, telefone atsiras „WhatsApp“ mygtukas.</small></div>' +
@@ -550,6 +552,7 @@
         var btn = this;
         var out = {
           name: document.getElementById('s-name').value.trim() || 'Remaster.lt',
+          slogan: document.getElementById('s-slogan').value.trim(),
           email: document.getElementById('s-email').value.trim(),
           phone: document.getElementById('s-phone').value.trim(),
           whatsapp: document.getElementById('s-wa').value.trim(),

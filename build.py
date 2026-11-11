@@ -34,6 +34,7 @@ OUT = ROOT / "svetaine"
 # Numatytieji nustatymai (perrašomi iš duomenys/nustatymai.json, t. y. per /admin/)
 SITE = {
     "name": "Remaster.lt",
+    "slogan": "Patikima kompiuterių priežiūra ir supirkimas",
     "email": "info@remaster.lt",
     "phone": "",
     "city": "Vilnius, Lietuva",
@@ -188,6 +189,16 @@ def brand_html():
     return html.escape(n)
 
 
+LOGO_MARK = '''<svg class="logo-mark" width="44" height="44" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="26" fill="#2563eb"/><path d="M40 28a12 12 0 1 1-4.2-9.1" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/><path d="M33 14.5 43 15.5 38.5 24.5Z" fill="#fb923c"/></svg>'''
+
+
+def logo_html():
+    """Logotipas: ženklas + pavadinimas + (nebūtinas) užrašas po juo."""
+    sl = SITE["slogan"].strip()
+    small = "<small>%s</small>" % html.escape(sl) if sl else ""
+    return LOGO_MARK + '<span class="logo-txt"><span class="logo-name">%s</span>%s</span>' % (brand_html(), small)
+
+
 def site_base():
     """Svetainės bazinis adresas (nustatytas domenas arba GitHub Pages adresas)."""
     if SITE["url"]:
@@ -272,7 +283,7 @@ def layout(title, desc, content, depth, active="", path=None, head_extra=""):
 <body>
 <nav class="nav">
   <div class="wrap nav-inner">
-    <a class="logo" href="{home}"><span class="logo-ico"><i class="fa-solid fa-microchip"></i></span><span>{brand}</span></a>
+    <a class="logo" href="{home}">{logo}</a>
     <div class="menu" id="menu">
       {menu}
     </div>
@@ -290,7 +301,7 @@ def layout(title, desc, content, depth, active="", path=None, head_extra=""):
 </html>""".format(
         title=html.escape(full_title), desc=html.escape(desc), p=p, home=home, content=content, seo=seo,
         head_extra=head_extra, mbar=mobile_bar(),
-        menu=menu, foot_links=foot_links, year=datetime.date.today().year, name=html.escape(SITE["name"]), brand=brand_html())
+        menu=menu, foot_links=foot_links, year=datetime.date.today().year, name=html.escape(SITE["name"]), logo=logo_html())
 
 
 def art_card(a, prefix):

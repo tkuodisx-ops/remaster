@@ -11,8 +11,11 @@ main{flex:1}
 .nav{position:sticky;top:0;z-index:50;background:rgba(15,23,42,.92);backdrop-filter:blur(10px);border-bottom:1px solid #1e293b}
 .nav-inner{display:flex;align-items:center;justify-content:space-between;height:72px;gap:16px}
 .logo{display:flex;align-items:center;gap:12px;font-weight:900;font-size:1.4rem;letter-spacing:.06em;color:#fff}
-.logo b{color:var(--blue2)}
-.logo-ico{width:40px;height:40px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.logo b{color:#fb923c}
+.logo-mark{flex:none;display:block}
+.logo-txt{display:flex;flex-direction:column;line-height:1.1}
+.logo-txt small{font-size:.62rem;font-weight:500;letter-spacing:.02em;color:#cbd5e1;margin-top:4px;line-height:1.2}
+@media(max-width:380px){.logo-txt small{display:none}}
 .menu{display:flex;gap:28px;font-size:.92rem;font-weight:500}
 .menu a:hover,.menu a.active{color:var(--blue3)}
 .burger{display:none;background:none;border:1px solid var(--line);color:#fff;width:44px;height:44px;border-radius:10px;font-size:1.2rem;cursor:pointer}
