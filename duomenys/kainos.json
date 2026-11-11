@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "pavadinimas": "Termo padų keitimas",
+    "kaina": "+15 €",
+    "pastaba": "Prie profilaktikos, jei reikia pakeisti termo padus"
+  },
+  {
+    "pavadinimas": "Profilaktika su skystu metalu",
+    "kaina": "45 €",
+    "pastaba": ""
+  },
+  {
+    "pavadinimas": "Ekrano keitimas",
+    "kaina": "nuo 150 €",
+    "pastaba": ""
+  },
+  {
+    "pavadinimas": "Ventiliatoriaus keitimas",
+    "kaina": "detalė + 30 €",
+    "pastaba": "Ventiliatoriaus kainą pasakome atnešus ir įvertinus prietaisą. Darbas: 30 €"
+  }
+]
